@@ -1,0 +1,915 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DarkMatter Shop</title>
+    <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-hover: #4f46e5;
+            --bg-dark: #0f172a;
+            --card-bg: #1e293b;
+            --text-light: #f8fafc;
+            --danger: #ef4444;
+            --success: #10b981;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-dark);
+            color: var(--text-light);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            position: relative;
+        }
+
+        .version-tag {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            font-size: 0.8em;
+            color: #475569;
+            font-weight: bold;
+        }
+
+        /* Estilo para el botón de Keys Vinculadas */
+        #btnKeysVinculadas {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.8em;
+            font-weight: bold;
+            display: none;
+        }
+
+        /* Estilo para el modal de Keys */
+        #modalKeys {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(15, 23, 42, 0.9);
+            z-index: 10000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-content {
+            background: var(--card-bg);
+            padding: 25px;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 500px;
+            max-height: 80vh;
+            overflow-y: auto;
+            position: relative;
+        }
+
+        .close-modal {
+            position: absolute;
+            top: 10px;
+            right: 15px;
+            cursor: pointer;
+            font-size: 1.5em;
+        }
+
+        .key-item {
+            background: #334155;
+            margin-bottom: 15px;
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid var(--primary);
+        }
+
+        .key-text {
+            color: var(--success);
+            font-family: monospace;
+            word-break: break-all;
+            display: block;
+            margin-top: 5px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+            width: 100%;
+            max-width: 600px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+        }
+
+        h1 { margin: 0; color: var(--primary); }
+
+        /* Contenedor para botones de acción en el header */
+        .header-actions {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 10px;
+            width: 100%;
+        }
+
+        .btn-logout {
+            background-color: var(--danger);
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.8em;
+            font-weight: bold;
+        }
+
+        .btn-toggle {
+            display: none;
+            background-color: var(--danger);
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .container {
+            background-color: var(--card-bg);
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+            width: 100%;
+            max-width: 600px;
+        }
+
+        .nav-tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #334155;
+            padding-bottom: 10px;
+        }
+
+        .tab-btn {
+            background-color: transparent;
+            color: var(--text-light);
+            border: 1px solid #334155;
+            padding: 10px 15px;
+            border-radius: 6px;
+            cursor: pointer;
+            flex: 1;
+            transition: 0.3s;
+            font-size: 0.9em;
+        }
+
+        .tab-btn.active {
+            background-color: var(--primary);
+            border-color: var(--primary);
+        }
+
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+
+        label { display: block; margin-top: 15px; font-weight: 600; font-size: 0.9em; color: #cbd5e1; }
+        input, select { 
+            width: 100%; padding: 10px; margin-top: 5px; 
+            border: 1px solid #475569; border-radius: 6px; 
+            box-sizing: border-box; background-color: #0f172a; color: white;
+        }
+        
+        .btn-action {
+            width: 100%; padding: 12px; margin-top: 20px;
+            background-color: var(--primary); color: white;
+            border: none; border-radius: 6px; cursor: pointer;
+            font-weight: bold; transition: background 0.3s;
+            text-decoration: none; display: inline-block; text-align: center;
+            box-sizing: border-box;
+        }
+        
+        .btn-action:hover { background-color: var(--primary-hover); }
+
+        /* Estilo para botones desactivados (gris) */
+        .btn-action:disabled, .btn-action.disabled-link {
+            background-color: #475569 !important;
+            cursor: not-allowed;
+            opacity: 0.6;
+            pointer-events: none;
+        }
+
+        .price-display { font-size: 1.5em; color: var(--success); font-weight: bold; margin: 10px 0; text-align: center; }
+        .instructions { background: #334155; padding: 15px; border-radius: 8px; margin-top: 15px; font-size: 0.9em; line-height: 1.6; }
+        
+        hr { border: 0; border-top: 1px solid #334155; margin: 25px 0; }
+        .roblox-img { width: 100%; max-width: 200px; display: block; margin: 0 auto 15px auto; border-radius: 8px; }
+        
+        #pantallaMantenimiento { display: none; text-align: center; padding: 50px 20px; }
+
+        /* Estilo para el mensaje de carga */
+        .loading-text {
+            display: none;
+            color: var(--primary);
+            font-weight: bold;
+            text-align: center;
+            margin-top: 10px;
+            font-size: 0.9em;
+        }
+
+        .phone-group {
+            display: flex;
+            gap: 5px;
+        }
+        .phone-group select {
+            width: 100px;
+        }
+
+        /* Estilos adicionales para Afiliados */
+        .afiliados-section {
+            margin-top: 15px;
+            padding-top: 10px;
+            border-top: 1px solid #475569;
+        }
+        .lista-afiliados {
+            list-style: none;
+            padding: 0;
+            margin: 10px 0;
+        }
+        .lista-afiliados li {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: #1e293b;
+            padding: 5px 10px;
+            margin-bottom: 5px;
+            border-radius: 4px;
+            font-size: 0.85em;
+        }
+        .btn-remove-afiliado {
+            background: var(--danger);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 2px 8px;
+            cursor: pointer;
+        }
+        .add-afiliado-group {
+            display: flex;
+            gap: 5px;
+            margin-top: 10px;
+        }
+        .add-afiliado-group input {
+            margin-top: 0;
+            padding: 5px;
+            font-size: 0.8em;
+        }
+        .btn-add-afiliado {
+            background: var(--success);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 5px 10px;
+            cursor: pointer;
+            font-size: 0.8em;
+        }
+
+        /* Estilo para el input editable de Roblox */
+        .editable-roblox {
+            background: #0f172a;
+            border: 1px solid #475569;
+            color: #10b981;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.9em;
+            width: 60%;
+            margin-left: 5px;
+        }
+
+        /* Estilo para el contador regresivo */
+        .contador-regresivo {
+            font-weight: bold;
+            color: var(--primary);
+            background: #0f172a;
+            padding: 2px 6px;
+            border-radius: 4px;
+        }
+
+        /* Estilo para separar un poco más la información de la Key */
+        .key-info-text {
+            margin-bottom: 4px;
+        }
+
+        /* Estilos para el contenedor del script de Delta */
+        .script-container {
+            background: #1e293b;
+            border: 1px solid #475569;
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 15px;
+            box-sizing: border-box;
+            width: 100%;
+        }
+        .script-container p {
+            margin: 0 0 10px 0;
+            font-size: 0.9em;
+            font-weight: bold;
+            color: var(--primary);
+            text-align: center;
+        }
+        .script-code {
+            background: #0f172a;
+            padding: 10px;
+            border-radius: 6px;
+            font-family: monospace;
+            color: var(--success);
+            word-break: break-all;
+            font-size: 0.85em;
+            margin-bottom: 10px;
+            border: 1px solid #334155;
+            text-align: left;
+        }
+        .btn-copy {
+            background-color: #334155;
+            color: white;
+            border: none;
+            padding: 10px;
+            width: 100%;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: 0.3s;
+            box-sizing: border-box;
+        }
+        .btn-copy:hover {
+            background-color: #475569;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="version-tag">v1.0</div>
+
+    <div id="modalKeys">
+        <div class="modal-content">
+            <span class="close-modal" onclick="cerrarModalKeys()">&times;</span>
+            <h2 style="color: var(--primary); text-align: center;">Tus Keys Vinculadas</h2>
+            <div id="listaKeysVinculadas">
+                <p style="text-align: center; color: #94a3b8;">Buscando tus keys...</p>
+            </div>
+        </div>
+    </div>
+
+    <div id="loginOverlay" style="position:fixed; top:0; left:0; width:100%; height:100%; background:var(--bg-dark); z-index:9999; display:flex; flex-direction:column; align-items:center; justify-content:center;">
+        <div style="background:var(--card-bg); padding:30px; border-radius:12px; text-align:center; box-shadow: 0 4px 15px rgba(0,0,0,0.5); width: 90%; max-width: 400px;">
+            <h2 style="color:var(--primary); margin-top:0;">Verificar Identidad</h2>
+            <p id="loginDesc" style="color:var(--text-light); margin-bottom:20px;">Ingresa tu correo para recibir un código de acceso.</p>
+            
+            <div id="step1">
+                <input type="email" id="googleEmailInput" placeholder="tu-correo@gmail.com" style="width:100%; padding:10px; margin-bottom:15px; border: 1px solid #475569; border-radius: 6px; background-color: #0f172a; color: white;">
+                <button class="btn-action" id="btnEnviarCodigo" onclick="enviarCodigoVerificacion()" style="background-color:#4285F4; margin-top:0;">Enviar Código</button>
+            </div>
+
+            <div id="step2" style="display:none;">
+                <p style="font-size: 0.9em; color: #10b981;">Se ha enviado un PIN a tu correo.</p>
+                <input type="number" id="pinInput" placeholder="Ingresa el PIN de 6 dígitos" style="width:100%; padding:10px; margin-bottom:15px; border: 1px solid #475569; border-radius: 6px; background-color: #0f172a; color: white;">
+                <button class="btn-action" onclick="verificarPIN()" style="background-color:var(--success); margin-top:0;">Verificar e Iniciar</button>
+                <button class="tab-btn" onclick="regresarStep1()" style="margin-top:10px; border:none; color: #94a3b8; text-decoration: underline;">Cambiar correo</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="header">
+        <h1>DarkMatter Shop</h1>
+        <div class="header-actions">
+            <button id="btnKeysVinculadas" onclick="abrirModalKeys()">Keys Vinculadas 🔑</button>
+            <button id="btnLogout" class="btn-logout" onclick="logout()">Cerrar Sesión</button>
+        </div>
+        <button class="btn-toggle" id="btnToggle" onclick="toggleTienda()" style="display: none;">Desactivar Tienda</button>
+    </div>
+
+    <div id="pantallaMantenimiento">
+        <h2>🛠️ Tienda en Mantenimiento 🛠️</h2>
+        <p>Actualmente no estamos aceptando compras. Por favor, regresa más tarde.</p>
+    </div>
+
+    <div class="container" id="tiendaContenedor">
+        <div class="nav-tabs">
+            <button class="tab-btn active" onclick="cambiarPestana('nequi')">Comprar con Nequi</button>
+            <button class="tab-btn" onclick="cambiarPestana('paypal')">Comprar con PayPal</button>
+            <button class="tab-btn" onclick="cambiarPestana('delta')">Descargar Delta</button>
+        </div>
+
+        <div id="nequi" class="tab-content active">
+            <h2>Pago mediante Nequi</h2>
+            <label>¿Por cuántos días deseas comprar?</label>
+            <input type="number" id="inputDiasNequi" min="0" max="365" value="1" oninput="validarEntero(this); actualizarCamposOcultos('nequi');">
+            
+            <div class="price-display">Total a pagar: $<span id="precioNequiCalculado">5550</span> COP</div>
+            
+            <div class="instructions">
+                <strong>Instrucciones detalladas de Nequi:</strong><br>
+                1. Abre tu aplicación de <strong>Nequi</strong> en tu dispositivo.<br>
+                2. Selecciona la opción de enviar dinero o escanea nuestro código.<br>
+                3. Envía el monto exacto mostrado arriba al número: <strong>+57 3001125554</strong>.<br>
+                4. Toma una <strong>captura de pantalla (pantallazo)</strong> donde se vea claramente el número de referencia y la fecha.<br>
+                5. Completa el formulario de abajo y adjunta la imagen para recibir tu Key.
+            </div>
+
+            <hr>
+            <form id="formNequi" action="https://formsubmit.co/oficialdarkmatter@gmail.com" method="POST" enctype="multipart/form-data" onsubmit="mostrarCarga(this)">
+                <input type="hidden" name="_subject" value="NUEVO PAGO NEQUI - DARKMATTER">
+                <input type="hidden" name="Comprador_Correo" id="hiddenEmailNequi">
+                <input type="hidden" name="Dias_Comprados" id="hiddenDiasNequi" value="1">
+                <input type="hidden" name="Monto_Pagado" id="hiddenMontoNequi" value="5550 COP">
+                <input type="hidden" name="Hora_Envio_Colombia" id="hiddenHoraNequi">
+                <input type="hidden" name="_next" value="https://sergioyt01.github.io/DarkMatter-Shop/?status=success">
+                <input type="hidden" name="_captcha" value="false">
+                
+                <label>Usuario de Roblox (No el de visualización):</label>
+                <input type="text" name="Usuario_Roblox" placeholder="Ej: SergioYT_01" required>
+
+                <label>Número de teléfono:</label>
+                <div class="phone-group">
+                    <select name="Prefijo_Pais" id="prefijoNequi" required></select>
+                    <input type="tel" name="Telefono" placeholder="3001234567" required>
+                </div>
+
+                <label>Marca de tu teléfono:</label>
+                <input type="text" name="Marca_Telefono" placeholder="Samsung, iPhone, Motorola, etc" required>
+
+                <label>Comprobante de pago (Imagen):</label>
+                <input type="file" name="file" accept="image/*" required>
+                
+                <button type="submit" id="btnSubmitNequi" class="btn-action">Enviar Comprobante</button>
+                <div class="loading-text">Subiendo comprobante, por favor espera...</div>
+            </form>
+        </div>
+
+        <div id="paypal" class="tab-content">
+            <h2>Pago mediante PayPal</h2>
+            <label>¿Por cuántos días deseas comprar?</label>
+            <input type="number" id="inputDiasPayPal" min="0" max="365" value="1" oninput="validarEntero(this); actualizarCamposOcultos('paypal');">
+            
+            <div class="price-display">Total a pagar: $<span id="precioPayPalCalculado">1.50</span> USD</div>
+            
+            <div class="instructions">
+                <strong>Instrucciones detalladas de PayPal:</strong><br>
+                1. Haz clic en el botón azul <strong>"Pagar con PayPal"</strong> que aparece abajo.<br>
+                2. Realiza el pago de forma segura en la ventana oficial de PayPal.<br>
+                3. Una vez finalizado, toma una <strong>captura del recibo</strong> que te muestra PayPal o el correo de confirmación.<br>
+                4. Regresa aquí, rellena tus datos de Roblox y sube la captura para que validemos tu suscripción.<br>
+                5. Tu Key será enviada automáticamente tras la revisión manual.
+            </div>
+
+            <a href="https://www.paypal.com/ncp/payment/2PEESZKA2QMNE" id="linkPayPal" target="_blank" class="btn-action" style="background-color: #0070ba; margin-top: 15px;">Pagar con PayPal</a>
+
+            <hr>
+            <form id="formPayPal" action="https://formsubmit.co/oficialdarkmatter@gmail.com" method="POST" enctype="multipart/form-data" onsubmit="mostrarCarga(this)">
+                <input type="hidden" name="_subject" value="NUEVO PAGO PAYPAL - DARKMATTER">
+                <input type="hidden" name="Comprador_Correo" id="hiddenEmailPayPal">
+                <input type="hidden" name="Dias_Comprados" id="hiddenDiasPayPal" value="1">
+                <input type="hidden" name="Monto_Pagado" id="hiddenMontoPayPal" value="1.50 USD">
+                <input type="hidden" name="Hora_Envio_Colombia" id="hiddenHoraPayPal">
+                <input type="hidden" name="_next" value="https://sergioyt01.github.io/DarkMatter-Shop/?status=success">
+                <input type="hidden" name="_captcha" value="false">
+                
+                <label>Usuario de Roblox (No el de visualización):</label>
+                <input type="text" name="Usuario_Roblox" placeholder="Ej: SergioYT_01" required>
+
+                <label>Número de teléfono:</label>
+                <div class="phone-group">
+                    <select name="Prefijo_Pais" id="prefijoPayPal" required></select>
+                    <input type="tel" name="Telefono" placeholder="3001234567" required>
+                </div>
+
+                <label>Marca de tu teléfono:</label>
+                <input type="text" name="Marca_Telefono" placeholder="Samsung, iPhone, Motorola, etc" required>
+
+                <label>Sube captura del recibo de PayPal:</label>
+                <input type="file" name="file" accept="image/*" required>
+                
+                <button type="submit" id="btnSubmitPayPal" class="btn-action">Enviar Comprobante</button>
+                <div class="loading-text">Subiendo comprobante, por favor espera...</div>
+            </form>
+        </div>
+
+        <div id="delta" class="tab-content">
+            <h2 style="text-align: center;">Ejecutor Delta</h2>
+            <img src="https://images-wixmp-ed30a86b8c4ca887773594c2.wixmp.com/f/141ab95a-cb35-446d-aff4-e42fc2f29e13/djvd4ab-5a7c1f3c-ece9-472c-bfe6-23087bd15302.jpg/v1/fill/w_1280,h_1280,q_75,strp/_fanmade__roblox_logo__alternate___2025__present__by_uriahlystander_djvd4ab-fullview.jpg?token=eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJ1cm46YXBwOjdlMGQxODg5ODIyNjQzNzNhNWYwZDQxNWVhMGQyNmUwIiwiaXNzIjoidXJuOmFwcDo3ZTBkMTg4OTgyMjY0MzczYTVmMGQ0MTVlYTBkMjZlMCIsIm9iaiI6W1t7ImhlaWdodCI6Ijw9MTI4MCIsInBhdGgiOiIvZi8xNDFhYjk1YS1jYjM1LTQ0NmQtYWZmNC1lNDJmYzJmMjllMTMvZGp2ZDRhYi01YTdjMWYzYy1lY2U5LTQ3MmMtYmZlNi0yMzA4N2JkMTUzMDIuanBnIiwid2lkdGgiOiI8PTEyODAifV1dLCJhdWQiOlsidXJuOnNlcnZpY2U6aW1hZ2Uub3BlcmF0aW9ucyJdfQ.2zpt5i-jcMtxwxUb8kbD3eD7jOp7H1oXEN81GpQG-1M" alt="Roblox Logo" class="roblox-img">
+            
+            <div class="instructions">
+                <strong>¿Por qué usar Delta Executor?</strong><br>
+                * 🚀 <strong>Máximo Rendimiento:</strong> Ejecución fluida sin lag en dispositivos móviles.<br>
+                * 🛠️ <strong>Alta Compatibilidad:</strong> Soporta la mayoría de scripts modernos y complejos.<br>
+                * 🛡️ <strong>Seguro:</strong> Actualizaciones constantes para evitar detecciones.<br>
+                * 📱 <strong>Interfaz Intuitiva:</strong> Fácil de usar, copiar y pegar tus scripts favoritos.
+            </div>
+
+            <div class="script-container">
+                <p>Ejecuta este script en Delta Executor para abrir el panel:</p>
+                <div class="script-code" id="scriptCopiar">loadstring(game:HttpGet("https://raw.githubusercontent.com/SergioYT01/DarkMatter_Key/refs/heads/main/DarkMatter_key.lua"))()</div>
+                <button class="btn-copy" onclick="copiarScript(this)">Copiar Script</button>
+            </div>
+
+            <p style="font-size: 0.8em; color: #94a3b8; text-align: center; margin-top: 15px;">
+                <i>Nota: Asegúrate de tener la última versión oficial para que DarkMatter funcione correctamente.</i>
+            </p>
+
+            <button onclick="descargarDelta()" class="btn-action" style="background-color: #8b5cf6;">Descargar Delta Executor</button>
+        </div>
+    </div>
+
+    <script>
+        const prefijos = [
+            {c: "+1", p: "Estados Unidos / Canadá"}, {c: "+7", p: "Rusia / Kazajistán"}, {c: "+20", p: "Egipto"}, {c: "+27", p: "Sudáfrica"}, 
+            {c: "+30", p: "Grecia"}, {c: "+31", p: "Países Bajos"}, {c: "+32", p: "Bélgica"}, {c: "+33", p: "Francia"}, 
+            {c: "+34", p: "España"}, {c: "+36", p: "Hungría"}, {c: "+39", p: "Italia"}, {c: "+40", p: "Rumania"}, 
+            {c: "+41", p: "Suiza"}, {c: "+43", p: "Austria"}, {c: "+44", p: "Reino Unido"}, {c: "+45", p: "Dinamarca"}, 
+            {c: "+46", p: "Suecia"}, {c: "+47", p: "Noruega"}, {c: "+48", p: "Polonia"}, {c: "+49", p: "Alemania"}, 
+            {c: "+51", p: "Perú"}, {c: "+52", p: "México"}, {c: "+53", p: "Cuba"}, {c: "+54", p: "Argentina"}, 
+            {c: "+55", p: "Brasil"}, {c: "+56", p: "Chile"}, {c: "+57", p: "Colombia"}, {c: "+58", p: "Venezuela"}, 
+            {c: "+60", p: "Malasia"}, {c: "+61", p: "Australia"}, {c: "+62", p: "Indonesia"}, {c: "+63", p: "Filipinas"}, 
+            {c: "+64", p: "Nueva Zelanda"}, {c: "+65", p: "Singapur"}, {c: "+66", p: "Tailandia"}, {c: "+81", p: "Japón"}, 
+            {c: "+82", p: "Corea del Sur"}, {c: "+84", p: "Vietnam"}, {c: "+86", p: "China"}, {c: "+90", p: "Turquía"}, 
+            {c: "+91", p: "India"}, {c: "+92", p: "Pakistán"}, {c: "+93", p: "Afganistán"}, {c: "+94", p: "Sri Lanka"}, 
+            {c: "+95", p: "Myanmar"}, {c: "+98", p: "Irán"}, {c: "+211", p: "Sudán del Sur"}, {c: "+212", p: "Marruecos"}, 
+            {c: "+213", p: "Argelia"}, {c: "+216", p: "Túnez"}, {c: "+218", p: "Libia"}, {c: "+220", p: "Gambia"}, 
+            {c: "+221", p: "Senegal"}, {c: "+222", p: "Mauritania"}, {c: "+223", p: "Mali"}, {c: "+224", p: "Guinea"}, 
+            {c: "+225", p: "Costa de Marfil"}, {c: "+226", p: "Burkina Faso"}, {c: "+227", p: "Níger"}, {c: "+228", p: "Togo"}, 
+            {c: "+229", p: "Benín"}, {c: "+230", p: "Mauricio"}, {c: "+231", p: "Liberia"}, {c: "+232", p: "Sierra Leona"}, 
+            {c: "+233", p: "Ghana"}, {c: "+234", p: "Nigeria"}, {c: "+235", p: "Chad"}, {c: "+236", p: "República Centroafricana"}, 
+            {c: "+237", p: "Camerún"}, {c: "+238", p: "Cabo Verde"}, {c: "+239", p: "Santo Tomé y Príncipe"}, {c: "+240", p: "Guinea Ecuatorial"}, 
+            {c: "+241", p: "Gabón"}, {c: "+242", p: "República del Congo"}, {c: "+243", p: "República Democrática del Congo"}, {c: "+244", p: "Angola"}, 
+            {c: "+245", p: "Guinea-Bisáu"}, {c: "+248", p: "Seychelles"}, {c: "+249", p: "Sudán"}, {c: "+250", p: "Ruanda"}, 
+            {c: "+251", p: "Etiopía"}, {c: "+252", p: "Somalia"}, {c: "+253", p: "Yibuti"}, {c: "+254", p: "Kenia"}, 
+            {c: "+255", p: "Tanzania"}, {c: "+256", p: "Uganda"}, {c: "+257", p: "Burundi"}, {c: "+258", p: "Mozambique"}, 
+            {c: "+260", p: "Zambia"}, {c: "+261", p: "Madagascar"}, {c: "+262", p: "Reunión"}, {c: "+263", p: "Zimbabue"}, 
+            {c: "+264", p: "Namibia"}, {c: "+265", p: "Malaui"}, {c: "+266", p: "Lesoto"}, {c: "+267", p: "Botsuana"}, 
+            {c: "+268", p: "Esuatini"}, {c: "+269", p: "Comoras"}
+        ];
+
+        function cargarPrefijos() {
+            const selectNequi = document.getElementById('prefijoNequi');
+            const selectPayPal = document.getElementById('prefijoPayPal');
+            prefijos.forEach(item => {
+                const opt1 = document.createElement('option');
+                const opt2 = document.createElement('option');
+                opt1.value = item.c; opt1.innerText = item.c + " " + item.p;
+                opt2.value = item.c; opt2.innerText = item.c + " " + item.p;
+                selectNequi.appendChild(opt1);
+                selectPayPal.appendChild(opt2);
+            });
+        }
+
+        (function() {
+            emailjs.init("2UbRoAsR9vqALDh91");
+        })();
+
+        let pinGenerado = "";
+        let correoTemporal = "";
+        let keysEncontradas = [];
+        let intervalosKeys = {};
+
+        window.onload = function() {
+            cargarPrefijos();
+            const correo = localStorage.getItem('googleEmailDarkMatter');
+            if (correo) {
+                document.getElementById('loginOverlay').style.display = 'none';
+                document.getElementById('googleEmailInput').value = correo;
+                actualizarCamposOcultos('nequi');
+                actualizarCamposOcultos('paypal');
+                buscarKeysVinculadas(correo);
+            }
+
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('status') === 'success') {
+                alert("✅ Tu comprobante se envió correctamente. Estaremos revisando tu compra de 5 minutos a 4 horas. Recibirás tu key a tu correo.");
+                window.history.replaceState({}, document.title, window.location.pathname);
+            }
+        };
+
+        async function buscarKeysVinculadas(correo) {
+            try {
+                const url = "https://key-sistem-roblox-dm-default-rtdb.firebaseio.com/keys.json";
+                const response = await fetch(url);
+                const data = await response.json();
+
+                if (!data) return;
+
+                keysEncontradas = [];
+                for (const keyId in data) {
+                    if (data[keyId].correo === correo) {
+                        keysEncontradas.push({
+                            id: keyId,
+                            ...data[keyId]
+                        });
+                    }
+                }
+
+                if (keysEncontradas.length > 0) {
+                    document.getElementById('btnKeysVinculadas').style.display = 'block';
+                    renderizarListaKeys();
+                }
+            } catch (error) {
+                console.error("Error buscando keys:", error);
+            }
+        }
+
+        function renderizarListaKeys() {
+            const lista = document.getElementById('listaKeysVinculadas');
+            lista.innerHTML = "";
+
+            // Limpiar intervalos antiguos
+            for (let id in intervalosKeys) {
+                clearInterval(intervalosKeys[id]);
+            }
+            intervalosKeys = {};
+
+            keysEncontradas.forEach((item, index) => {
+                const div = document.createElement('div');
+                div.className = "key-item";
+                
+                // Procesar afiliados
+                const afiliadosArr = item.afiliados ? item.afiliados.split(",") : [];
+                let afiliadosHTML = "";
+                afiliadosArr.forEach(nombre => {
+                    if(nombre) {
+                        afiliadosHTML += `<li>${nombre} <button class="btn-remove-afiliado" onclick="gestionarAfiliadoPersonalizado('remove', '${item.id}', '${nombre}')">X</button></li>`;
+                    }
+                });
+
+                div.innerHTML = `
+                    <p><strong>Key #${index + 1}:</strong> <span class="key-text">${item.id}</span></p>
+                    <div style="font-size: 0.9em; margin-top: 10px;">
+                        <p class="key-info-text">👤 <strong>Usuario Roblox:</strong> <input type="text" class="editable-roblox" value="${item.nombreRoblox || ""}" onblur="actualizarNombreRoblox('${item.id}', this.value)" placeholder="Ingresa usuario"></p>
+                        <p class="key-info-text">💰 <strong>Costo:</strong> ${item.costo || "N/A"}</p>
+                        <p class="key-info-text">📅 <strong>Expira en:</strong> <span class="contador-regresivo" id="timer-${item.id}">Cargando...</span></p>
+                        <p class="key-info-text">📱 <strong>Dispositivo:</strong> ${item.dispositivo || "N/A"}</p>
+                    </div>
+                    <div class="afiliados-section">
+                        <h4 style="margin: 0; font-size: 0.9em; color: var(--primary);">Afiliados</h4>
+                        <ul class="lista-afiliados" id="lista-afiliados-${item.id}">
+                            ${afiliadosHTML || '<p style="font-size: 0.8em; color: #94a3b8;">Sin afiliados</p>'}
+                        </ul>
+                        <div class="add-afiliado-group">
+                            <input type="text" id="input-afiliado-${item.id}" placeholder="Nombre en Roblox">
+                            <button class="btn-add-afiliado" onclick="gestionarAfiliadoPersonalizado('add', '${item.id}')">Agregar</button>
+                        </div>
+                    </div>
+                `;
+                lista.appendChild(div);
+
+                // Iniciar contador para esta key
+                if (item.expira) {
+                    iniciarContadorKey(item.id, item.expira);
+                }
+            });
+        }
+
+        function iniciarContadorKey(id, fechaFin) {
+            const timerElement = document.getElementById(`timer-${id}`);
+            
+            function actualizar() {
+                const exp = new Date(fechaFin.replace(" ", "T")).getTime();
+                const ahora = new Date().getTime();
+                const diff = exp - ahora;
+
+                if (diff <= 0) {
+                    timerElement.innerText = "Expirado";
+                    timerElement.style.color = "var(--danger)";
+                    clearInterval(intervalosKeys[id]);
+                    return;
+                }
+
+                const d = Math.floor(diff / (1000 * 60 * 60 * 24));
+                const h = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+                const s = Math.floor((diff % (1000 * 60)) / 1000);
+
+                timerElement.innerText = `${d}d ${h}h ${m}m ${s}s`;
+            }
+
+            actualizar();
+            intervalosKeys[id] = setInterval(actualizar, 1000);
+        }
+
+        async function actualizarNombreRoblox(keyId, nuevoNombre) {
+            try {
+                const response = await fetch(`https://key-sistem-roblox-dm-default-rtdb.firebaseio.com/keys/${keyId}.json`, {
+                    method: "PATCH",
+                    body: JSON.stringify({ nombreRoblox: nuevoNombre })
+                });
+                if (response.ok) {
+                    console.log(`Nombre de Roblox actualizado para la key ${keyId}`);
+                }
+            } catch (error) {
+                console.error("Error al actualizar nombre de Roblox:", error);
+            }
+        }
+
+        async function gestionarAfiliadoPersonalizado(accion, keyId, nombre = "") {
+            const inputElement = document.getElementById(`input-afiliado-${keyId}`);
+            const nombreAProcesar = accion === 'add' ? inputElement.value : nombre;
+
+            if (accion === 'add' && !nombreAProcesar) {
+                alert("Ingresa un nombre de usuario.");
+                return;
+            }
+
+            try {
+                // Obtener datos actuales de esa key específica
+                const res = await fetch(`https://key-sistem-roblox-dm-default-rtdb.firebaseio.com/keys/${keyId}/afiliados.json`);
+                let afiliadosStr = await res.json() || "";
+                let lista = afiliadosStr ? afiliadosStr.split(",") : [];
+
+                if (accion === 'add') {
+                    lista.push(nombreAProcesar);
+                    if(inputElement) inputElement.value = "";
+                } else {
+                    lista = lista.filter(item => item !== nombreAProcesar);
+                }
+
+                // Guardar cambios
+                await fetch(`https://key-sistem-roblox-dm-default-rtdb.firebaseio.com/keys/${keyId}.json`, {
+                    method: "PATCH",
+                    body: JSON.stringify({ afiliados: lista.join(",") })
+                });
+
+                // Refrescar lista local y UI
+                const correo = localStorage.getItem('googleEmailDarkMatter');
+                await buscarKeysVinculadas(correo);
+
+            } catch (error) {
+                console.error("Error gestionando afiliado:", error);
+            }
+        }
+
+        function abrirModalKeys() {
+            document.getElementById('modalKeys').style.display = 'flex';
+        }
+
+        function cerrarModalKeys() {
+            document.getElementById('modalKeys').style.display = 'none';
+        }
+
+        function enviarCodigoVerificacion() {
+            const email = document.getElementById('googleEmailInput').value;
+            if (!email.includes('@')) {
+                alert('Ingresa un correo válido.');
+                return;
+            }
+
+            const btn = document.getElementById('btnEnviarCodigo');
+            btn.innerText = "Enviando...";
+            btn.disabled = true;
+
+            pinGenerado = Math.floor(100000 + Math.random() * 900000).toString();
+            correoTemporal = email;
+
+            const templateParams = {
+                to_email: email,
+                message: pinGenerado
+            };
+
+            emailjs.send('service_hu31i2y', 'template_j7pyhsf', templateParams)
+                .then(function() {
+                    document.getElementById('step1').style.display = 'none';
+                    document.getElementById('step2').style.display = 'block';
+                    document.getElementById('loginDesc').innerText = "Verifica tu bandeja de entrada.";
+                }, function(error) {
+                    alert('Error al enviar el código. Intenta de nuevo.');
+                    btn.innerText = "Enviar Código";
+                    btn.disabled = false;
+                    console.log("Error EmailJS:", error);
+                });
+        }
+
+        function verificarPIN() {
+            const pinUsuario = document.getElementById('pinInput').value;
+            if (pinUsuario === pinGenerado) {
+                alert('¡Código correcto! Ya puedes acceder a tu cuenta.');
+                localStorage.setItem('googleEmailDarkMatter', correoTemporal);
+                location.reload();
+            } else {
+                alert('PIN incorrecto. Revisa tu correo.');
+            }
+        }
+
+        function regresarStep1() {
+            document.getElementById('step1').style.display = 'block';
+            document.getElementById('step2').style.display = 'none';
+            document.getElementById('btnEnviarCodigo').innerText = "Enviar Código";
+            document.getElementById('btnEnviarCodigo').disabled = false;
+        }
+
+        function logout() {
+            localStorage.removeItem('googleEmailDarkMatter');
+            location.reload();
+        }
+
+        function validarEntero(input) {
+            if (input.value === "") return;
+            input.value = Math.floor(input.value);
+            if (input.value < 0) input.value = 0;
+        }
+
+        function obtenerHoraColombia() {
+            return new Date().toLocaleString("es-CO", {timeZone: "America/Bogota"});
+        }
+
+        function actualizarCamposOcultos(metodo) {
+            const email = localStorage.getItem('googleEmailDarkMatter') || "No login";
+            const horaActual = obtenerHoraColombia();
+            
+            if(metodo === 'nequi') {
+                const diasInput = document.getElementById('inputDiasNequi').value;
+                const dias = (diasInput === "" || parseInt(diasInput) === 0) ? 0 : parseInt(diasInput);
+                
+                let precioCOP = 0;
+                if (dias > 0) {
+                    let precioBaseUSD = (dias == 1) ? 1.5 : (dias * (8/7));
+                    precioCOP = Math.ceil((precioBaseUSD * 3700) / 100) * 100;
+                }
+                
+                document.getElementById('precioNequiCalculado').innerText = precioCOP;
+                document.getElementById('hiddenEmailNequi').value = email;
+                document.getElementById('hiddenDiasNequi').value = dias;
+                document.getElementById('hiddenMontoNequi').value = precioCOP + " COP";
+                document.getElementById('hiddenHoraNequi').value = horaActual;
+
+                const btnNequi = document.getElementById('btnSubmitNequi');
+                if (dias === 0) {
+                    btnNequi.disabled = true;
+                } else {
+                    btnNequi.disabled = false;
+                }
+            } else {
+                const diasInput = document.getElementById('inputDiasPayPal').value;
+                const dias = (diasInput === "" || parseInt(diasInput) === 0) ? 0 : parseInt(diasInput);
+                
+                let precioUSD = 0;
+                if (dias > 0) {
+                    precioUSD = (dias == 1) ? 1.5 : (dias * (8/7));
+                }
+                
+                document.getElementById('precioPayPalCalculado').innerText = precioUSD.toFixed(2);
+                document.getElementById('hiddenEmailPayPal').value = email;
+                document.getElementById('hiddenDiasPayPal').value = dias;
+                document.getElementById('hiddenMontoPayPal').value = precioUSD.toFixed(2) + " USD";
+                document.getElementById('hiddenHoraPayPal').value = horaActual;
+
+                const btnSubmitPayPal = document.getElementById('btnSubmitPayPal');
+                const linkPayPal = document.getElementById('linkPayPal');
+                if (dias === 0) {
+                    btnSubmitPayPal.disabled = true;
+                    linkPayPal.classList.add('disabled-link');
+                } else {
+                    btnSubmitPayPal.disabled = false;
+                    linkPayPal.classList.remove('disabled-link');
+                }
+            }
+        }
+
+        function mostrarCarga(form) {
+            const btn = form.querySelector('button');
+            const loading = form.querySelector('.loading-text');
+            btn.innerText = "Enviando...";
+            btn.disabled = true;
+            btn.style.opacity = "0.7";
+            loading.style.display = "block";
+        }
+
+        function cambiarPestana(id) {
+            document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.getElementById(id).classList.add('active');
+            event.currentTarget.classList.add('active');
+        }
+
+        function descargarDelta() { window.open("https://delta-executor.com/", '_blank'); }
+        function toggleTienda() {}
+
+        function copiarScript(btn) {
+            const texto = document.getElementById('scriptCopiar').innerText;
+            navigator.clipboard.writeText(texto).then(() => {
+                const textoOriginal = btn.innerText;
+                btn.innerText = "¡Copiado correctamente!";
+                btn.style.backgroundColor = "var(--success)";
+                setTimeout(() => {
+                    btn.innerText = textoOriginal;
+                    btn.style.backgroundColor = "#334155";
+                }, 2000);
+            }).catch(err => {
+                console.error("Error al copiar: ", err);
+                alert("No se pudo copiar el texto automáticamente. Por favor, selecciónalo y cópialo manualmente.");
+            });
+        }
+    </script>
+</body>
+</html>
