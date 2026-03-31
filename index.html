@@ -117,23 +117,10 @@
             align-items: center;
             gap: 10px;
             width: 100%;
-            flex-wrap: wrap;
         }
 
         .btn-logout {
             background-color: var(--danger);
-            color: white;
-            border: none;
-            padding: 8px 12px;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 0.8em;
-            font-weight: bold;
-        }
-
-        .btn-admin-header {
-            display: none;
-            background-color: #475569;
             color: white;
             border: none;
             padding: 8px 12px;
@@ -424,7 +411,7 @@
         <div class="header-actions">
             <button id="btnKeysVinculadas" onclick="abrirModalKeys()">Keys Vinculadas 🔑</button>
             <button id="btnLogout" class="btn-logout" onclick="logout()">Cerrar Sesión</button>
-            <button id="btnAdminHeader" class="btn-admin-header" onclick="cambiarPestana('adminPanel')">Administrar Pedidos</button>
+            <button class="tab-btn" id="tabAdmin" onclick="cambiarPestana('adminPanel')" style="display: none; background-color: #475569; font-size: 0.8em; padding: 8px 12px; border: none; font-weight: bold; width: auto; flex: none;">Administrar Pedidos</button>
         </div>
         <button class="btn-toggle" id="btnToggle" onclick="toggleTienda()" style="display: none;">Desactivar Tienda</button>
     </div>
@@ -439,7 +426,6 @@
             <button class="tab-btn active" id="tabNequi" onclick="cambiarPestana('nequi')">Comprar con Nequi</button>
             <button class="tab-btn" id="tabPaypal" onclick="cambiarPestana('paypal')">Comprar con PayPal</button>
             <button class="tab-btn" id="tabDelta" onclick="cambiarPestana('delta')">Descargar Delta</button>
-            <button class="tab-btn" id="tabAdmin" onclick="cambiarPestana('adminPanel')" style="display: none; background-color: #475569;">Administrar Pedidos</button>
         </div>
 
         <div id="nequi" class="tab-content active">
@@ -636,7 +622,6 @@
                 
                 if (correo.toLowerCase() === 'oficialdarkmatter@gmail.com') {
                     document.getElementById('tabAdmin').style.display = 'block';
-                    document.getElementById('btnAdminHeader').style.display = 'block';
                 }
             }
 
