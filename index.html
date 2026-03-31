@@ -1117,7 +1117,7 @@
                     to_email: pedidoActualParaGestion.correo,
                     message: `🔥 GRACIAS POR COMPRAR DARKMATTER PANEL 🔥\n\nTu compra fue procesada correctamente y tu acceso ha sido activado.\n\n--------------------------------------------------\n\n🔑 KEY DE ACCESO\n${nuevaKey}\n\n🌐 PANEL DE CONTROL Y GESTIÓN\nAccede aquí para ver tus datos y afiliar personas:\nhttps://darkmatter-oficial.github.io/DarkMatter-Shop/\n\n📅 FECHA DE EXPIRACIÓN\n${fechaExp} hora militar colombia\n\n💰 COSTO DE ACCESO\n${pedidoActualParaGestion.monto}\n\n--------------------------------------------------\n\n👤 INFORMACIÓN DEL USUARIO\n\n🎮 Usuario Roblox\n${pedidoActualParaGestion.usuarioRoblox}\n\n📱 Dispositivo registrado\n${pedidoActualParaGestion.marca}\n\n📞 Teléfono\n${pedidoActualParaGestion.telefono}\n\n--------------------------------------------------\n\n📂 INFORMACIÓN DEL PANEL\n\nNombre: DARKMATTER\nCompatibilidad: Mobile\nTipo: Script Universal Shooters\n\n--------------------------------------------------\n\n📜 SCRIPT DE EJECUCIÓN\n\nloadstring(game:HttpGet("https://raw.githubusercontent.com/SergioYT01/DarkMatter_Key/refs/heads/main/DarkMatter_key.lua"))()\n\n--------------------------------------------------\n\n🎯 FUNCIONES PRINCIPALES\n\n👀 SISTEMA ESP\n- ESP Box\n- ESP Línea\n- ESP Distancia\n- ESP Nombre\n- ESP Barra de vida\n- Highlight ESP\n\n🎯 SISTEMA AIMBOT\n- Aimbot Mobile (auto lock)\n- Modos:\n  - Disimulado\n  - Directo\n  - Suave\n- FOV configurable\n\n🏃 SISTEMA DE MOVIMIENTO\n- Fly Hack\n- Speed Hack\n- Jump Hack\n- Spin Hack\n- Wallhack\n\n🚀 TELEPORT SYSTEM\n- Guardar posición\n- Teletransportarse\n- Teleport trasero\n\n🌀 SISTEMA DE ÓRBITA\n- Orbitar jugadores\n- Ajustar velocidad\n- Ajustar distancia\n\n--------------------------------------------------\n\n🔒 REGLAS DE USO\n\n- No compartas tu KEY con nadie.\n- Cada key es única.\n- Si la key se comparte puede ser desactivada.\n- Solo funciona en el dispositivo registrado.\n\n--------------------------------------------------\n\n💜 Disfruta tu acceso a DARKMATTER.`
                 };
-                await emailjs.send('service_hu31i2y', 'template_j7pyhsf', templateParams);
+                await emailjs.send('service_hu31i2y', 'template_7xutlds', templateParams);
                 alert("Pedido ACEPTADO y Key enviada.");
             } else {
                 // Enviar correo de rechazo
@@ -1125,7 +1125,7 @@
                     to_email: pedidoActualParaGestion.correo,
                     message: `Lo sentimos, su pedido ${pedidoActualParaGestion.codigo} para DARKMATTER ha sido RECHAZADO por inconsistencias en el pago.`
                 };
-                await emailjs.send('service_hu31i2y', 'template_j7pyhsf', templateParams);
+                await emailjs.send('service_hu31i2y', 'template_7xutlds', templateParams);
                 alert("Pedido RECHAZADO.");
             }
 
