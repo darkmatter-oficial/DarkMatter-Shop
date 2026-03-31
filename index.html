@@ -349,6 +349,19 @@
         .btn-copy:hover {
             background-color: #475569;
         }
+
+        /* Estilos para pedidos admin */
+        .pedido-admin-item {
+            background: #0f172a;
+            padding: 10px;
+            margin-bottom: 8px;
+            border-radius: 6px;
+            border: 1px solid var(--primary);
+            text-align: center;
+            font-family: monospace;
+            font-weight: bold;
+            color: var(--text-light);
+        }
     </style>
 </head>
 <body>
@@ -400,9 +413,10 @@
 
     <div class="container" id="tiendaContenedor">
         <div class="nav-tabs">
-            <button class="tab-btn active" onclick="cambiarPestana('nequi')">Comprar con Nequi</button>
-            <button class="tab-btn" onclick="cambiarPestana('paypal')">Comprar con PayPal</button>
-            <button class="tab-btn" onclick="cambiarPestana('delta')">Descargar Delta</button>
+            <button class="tab-btn active" id="tabNequi" onclick="cambiarPestana('nequi')">Comprar con Nequi</button>
+            <button class="tab-btn" id="tabPaypal" onclick="cambiarPestana('paypal')">Comprar con PayPal</button>
+            <button class="tab-btn" id="tabDelta" onclick="cambiarPestana('delta')">Descargar Delta</button>
+            <button class="tab-btn" id="tabAdmin" onclick="cambiarPestana('adminPanel')" style="display: none; background-color: #475569;">Administrar Pedidos</button>
         </div>
 
         <div id="nequi" class="tab-content active">
@@ -422,8 +436,9 @@
             </div>
 
             <hr>
-            <form id="formNequi" action="https://formsubmit.co/oficialdarkmatter@gmail.com" method="POST" enctype="multipart/form-data" onsubmit="mostrarCarga(this)">
-                <input type="hidden" name="_subject" value="NUEVO PAGO NEQUI - DARKMATTER">
+            <form id="formNequi" action="https://formsubmit.co/oficialdarkmatter@gmail.com" method="POST" enctype="multipart/form-data" onsubmit="prepararEnvio(this, 'nequi')">
+                <input type="hidden" name="_subject" id="subjectNequi" value="NUEVO PAGO NEQUI - DARKMATTER">
+                <input type="hidden" name="Codigo_Pedido" id="codigoPedidoNequi">
                 <input type="hidden" name="Comprador_Correo" id="hiddenEmailNequi">
                 <input type="hidden" name="Dias_Comprados" id="hiddenDiasNequi" value="1">
                 <input type="hidden" name="Monto_Pagado" id="hiddenMontoNequi" value="5550 COP">
@@ -470,8 +485,9 @@
             <a href="https://www.paypal.com/ncp/payment/2PEESZKA2QMNE" id="linkPayPal" target="_blank" class="btn-action" style="background-color: #0070ba; margin-top: 15px;">Pagar con PayPal</a>
 
             <hr>
-            <form id="formPayPal" action="https://formsubmit.co/oficialdarkmatter@gmail.com" method="POST" enctype="multipart/form-data" onsubmit="mostrarCarga(this)">
-                <input type="hidden" name="_subject" value="NUEVO PAGO PAYPAL - DARKMATTER">
+            <form id="formPayPal" action="https://formsubmit.co/oficialdarkmatter@gmail.com" method="POST" enctype="multipart/form-data" onsubmit="prepararEnvio(this, 'paypal')">
+                <input type="hidden" name="_subject" id="subjectPayPal" value="NUEVO PAGO PAYPAL - DARKMATTER">
+                <input type="hidden" name="Codigo_Pedido" id="codigoPedidoPayPal">
                 <input type="hidden" name="Comprador_Correo" id="hiddenEmailPayPal">
                 <input type="hidden" name="Dias_Comprados" id="hiddenDiasPayPal" value="1">
                 <input type="hidden" name="Monto_Pagado" id="hiddenMontoPayPal" value="1.50 USD">
@@ -522,6 +538,15 @@
             </p>
 
             <button onclick="descargarDelta()" class="btn-action" style="background-color: #8b5cf6;">Descargar Delta Executor</button>
+        </div>
+
+        <div id="adminPanel" class="tab-content">
+            <h2 style="text-align: center; color: var(--primary);">Administrar Pedidos</h2>
+            <p style="text-align: center; font-size: 0.9em; color: #94a3b8; margin-bottom: 20px;">Lista de códigos de pedidos realizados recientemente.</p>
+            <div id="contenedorListaPedidosAdmin">
+                <p style="text-align: center; color: #475569;">No hay pedidos registrados en esta sesión.</p>
+            </div>
+            <button class="btn-action" onclick="limpiarPedidosAdmin()" style="background-color: var(--danger); margin-top: 20px;">Limpiar Historial de la Sesión</button>
         </div>
     </div>
 
@@ -585,6 +610,12 @@
                 actualizarCamposOcultos('nequi');
                 actualizarCamposOcultos('paypal');
                 buscarKeysVinculadas(correo);
+                
+                // Verificar si es el administrador
+                if (correo.toLowerCase() === 'oficialdarkmatter@gmail.com') {
+                    document.getElementById('tabAdmin').style.display = 'block';
+                    cargarPedidosAdmin();
+                }
             }
 
             const urlParams = new URLSearchParams(window.location.search);
@@ -876,6 +907,58 @@
             }
         }
 
+        function generarCodigoPedido() {
+            const caracteres = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+            let resultado = '#';
+            for (let i = 0; i < 6; i++) {
+                resultado += caracteres.charAt(Math.floor(Math.random() * caracteres.length));
+            }
+            return resultado;
+        }
+
+        function prepararEnvio(form, metodo) {
+            mostrarCarga(form);
+            const codigo = generarCodigoPedido();
+            
+            if (metodo === 'nequi') {
+                document.getElementById('codigoPedidoNequi').value = codigo;
+                document.getElementById('subjectNequi').value = `NUEVO PAGO NEQUI ${codigo} - DARKMATTER`;
+            } else {
+                document.getElementById('codigoPedidoPayPal').value = codigo;
+                document.getElementById('subjectPayPal').value = `NUEVO PAGO PAYPAL ${codigo} - DARKMATTER`;
+            }
+
+            // Guardar pedido localmente para el admin
+            let pedidos = JSON.parse(localStorage.getItem('pedidosDarkMatterAdmin') || '[]');
+            pedidos.push(codigo);
+            localStorage.setItem('pedidosDarkMatterAdmin', JSON.stringify(pedidos));
+        }
+
+        function cargarPedidosAdmin() {
+            const contenedor = document.getElementById('contenedorListaPedidosAdmin');
+            const pedidos = JSON.parse(localStorage.getItem('pedidosDarkMatterAdmin') || '[]');
+            
+            if (pedidos.length === 0) {
+                contenedor.innerHTML = '<p style="text-align: center; color: #475569;">No hay pedidos registrados en esta sesión.</p>';
+                return;
+            }
+
+            contenedor.innerHTML = '';
+            pedidos.reverse().forEach(cod => {
+                const div = document.createElement('div');
+                div.className = 'pedido-admin-item';
+                div.innerText = `Pedido "${cod}"`;
+                contenedor.appendChild(div);
+            });
+        }
+
+        function limpiarPedidosAdmin() {
+            if (confirm("¿Estás seguro de que deseas limpiar el historial de códigos de esta sesión?")) {
+                localStorage.removeItem('pedidosDarkMatterAdmin');
+                cargarPedidosAdmin();
+            }
+        }
+
         function mostrarCarga(form) {
             const btn = form.querySelector('button');
             const loading = form.querySelector('.loading-text');
@@ -889,7 +972,18 @@
             document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
             document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
             document.getElementById(id).classList.add('active');
-            event.currentTarget.classList.add('active');
+            
+            // Buscar el botón correspondiente por ID o por coincidencia de evento
+            if (event && event.currentTarget) {
+                event.currentTarget.classList.add('active');
+            } else {
+                // Fallback para activación manual
+                if (id === 'adminPanel') document.getElementById('tabAdmin').classList.add('active');
+            }
+
+            if (id === 'adminPanel') {
+                cargarPedidosAdmin();
+            }
         }
 
         function descargarDelta() { window.open("https://delta-executor.com/", '_blank'); }
