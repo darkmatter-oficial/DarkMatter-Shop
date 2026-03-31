@@ -571,7 +571,6 @@
             <div id="contenedorListaPedidosAdmin">
                 <p style="text-align: center; color: #475569;">Buscando pedidos en el servidor...</p>
             </div>
-            <button class="btn-action" onclick="limpiarPedidosAdmin()" style="background-color: var(--danger); margin-top: 20px;">Limpiar Historial Global</button>
 
             <div class="seccion-gestion-pedido">
                 <h3 style="text-align: center; color: var(--primary); margin-top: 0;">Aceptar o Rechazar Pedido</h3>
@@ -1061,20 +1060,21 @@
 
         async function buscarPedidoParaGestion() {
             const codigoRaw = document.getElementById('inputCodigoGestion').value.trim();
-            const codigo = codigoRaw.replace('#', '');
             const area = document.getElementById('areaDecisionPedido');
             const info = document.getElementById('infoPedidoEncontrado');
 
-            if (codigo.length < 3) {
+            if (!codigoRaw.startsWith('#') || codigoRaw.length < 4) {
                 area.style.display = 'none';
                 return;
             }
+
+            const codigo = codigoRaw.replace('#', '');
 
             try {
                 const response = await fetch(`https://key-sistem-roblox-dm-default-rtdb.firebaseio.com/pedidos_admin/${codigo}.json`);
                 const data = await response.json();
 
-                if (data) {
+                if (data && data.codigo === codigoRaw) {
                     pedidoActualParaGestion = data;
                     info.innerHTML = `
                         <strong>Pedido:</strong> ${data.codigo}<br>
