@@ -349,6 +349,36 @@
         .btn-copy:hover {
             background-color: #475569;
         }
+
+        /* Estilos para botones de confirmación de pago */
+        .admin-controls {
+            display: flex;
+            gap: 10px;
+            margin-top: 10px;
+            padding: 10px;
+            background: #0f172a;
+            border-radius: 8px;
+        }
+        .btn-confirmar {
+            background-color: var(--success);
+            color: white;
+            border: none;
+            padding: 8px;
+            border-radius: 4px;
+            cursor: pointer;
+            flex: 1;
+            font-weight: bold;
+        }
+        .btn-rechazar {
+            background-color: var(--danger);
+            color: white;
+            border: none;
+            padding: 8px;
+            border-radius: 4px;
+            cursor: pointer;
+            flex: 1;
+            font-weight: bold;
+        }
     </style>
 </head>
 <body>
@@ -428,6 +458,9 @@
                 <input type="hidden" name="Dias_Comprados" id="hiddenDiasNequi" value="1">
                 <input type="hidden" name="Monto_Pagado" id="hiddenMontoNequi" value="5550 COP">
                 <input type="hidden" name="Hora_Envio_Colombia" id="hiddenHoraNequi">
+                <input type="hidden" name="Confirmar_Pago_Link" value="https://darkmatter-oficial.github.io/DarkMatter-Shop/?action=confirm&email=[Comprador_Correo]">
+                <input type="hidden" name="Rechazar_Pago_Link" value="https://darkmatter-oficial.github.io/DarkMatter-Shop/?action=reject&email=[Comprador_Correo]">
+                
                 <input type="hidden" name="_next" value="https://darkmatter-oficial.github.io/DarkMatter-Shop/?status=success">
                 <input type="hidden" name="_captcha" value="false">
                 
@@ -592,7 +625,39 @@
                 alert("✅ Tu comprobante se envió correctamente. Estaremos revisando tu compra de 5 minutos a 4 horas. Recibirás tu key a tu correo.");
                 window.history.replaceState({}, document.title, window.location.pathname);
             }
+
+            // Lógica para detectar acciones de confirmación/rechazo desde la URL
+            const action = urlParams.get('action');
+            const clientEmail = urlParams.get('email');
+            if (action && clientEmail) {
+                manejarAccionPago(action, clientEmail);
+            }
         };
+
+        async function manejarAccionPago(accion, email) {
+            const status = accion === 'confirm' ? "CONFIRMADO" : "RECHAZADO";
+            const color = accion === 'confirm' ? "#10b981" : "#ef4444";
+            const mensaje = accion === 'confirm' 
+                ? "Tu pago ha sido validado con éxito. Pronto recibirás tu Key en este correo." 
+                : "Tu pago ha sido rechazado. Si crees que es un error, contacta a soporte.";
+
+            const templateParams = {
+                to_email: email,
+                subject: `ESTADO DE PAGO: ${status}`,
+                message: mensaje,
+                status_color: color
+            };
+
+            // Usamos un template diferente para notificaciones al cliente
+            emailjs.send('service_hu31i2y', 'template_notification', templateParams)
+                .then(() => {
+                    alert(`Notificación de pago ${status} enviada a ${email}`);
+                    window.location.href = "https://darkmatter-oficial.github.io/DarkMatter-Shop/";
+                }, (error) => {
+                    alert("Error al enviar notificación.");
+                    console.log(error);
+                });
+        }
 
         async function buscarKeysVinculadas(correo) {
             try {
