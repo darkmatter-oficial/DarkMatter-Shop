@@ -371,6 +371,22 @@
             display: flex;
             justify-content: space-between;
         }
+
+        /* Estilos para el nuevo apartado de Aceptar/Rechazar */
+        .seccion-gestion-pedido {
+            background: #1e293b;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 25px;
+            border: 1px dashed var(--primary);
+        }
+        .botones-decision {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        .btn-aceptar { background-color: var(--success); flex: 1; padding: 10px; border: none; border-radius: 6px; color: white; font-weight: bold; cursor: pointer; }
+        .btn-rechazar { background-color: var(--danger); flex: 1; padding: 10px; border: none; border-radius: 6px; color: white; font-weight: bold; cursor: pointer; }
     </style>
 </head>
 <body>
@@ -556,6 +572,20 @@
                 <p style="text-align: center; color: #475569;">Buscando pedidos en el servidor...</p>
             </div>
             <button class="btn-action" onclick="limpiarPedidosAdmin()" style="background-color: var(--danger); margin-top: 20px;">Limpiar Historial Global</button>
+
+            <div class="seccion-gestion-pedido">
+                <h3 style="text-align: center; color: var(--primary); margin-top: 0;">Aceptar o Rechazar Pedido</h3>
+                <label>Escribe el código del pedido (ej: #ABC123):</label>
+                <input type="text" id="inputCodigoGestion" placeholder="Ingresa el código aquí" oninput="buscarPedidoParaGestion()">
+                
+                <div id="areaDecisionPedido" style="display: none; margin-top: 15px;">
+                    <div id="infoPedidoEncontrado" style="font-size: 0.85em; background: #0f172a; padding: 10px; border-radius: 6px; margin-bottom: 10px;"></div>
+                    <div class="botones-decision">
+                        <button class="btn-aceptar" onclick="gestionarPedidoAccion('aceptar')">Aceptar Pedido</button>
+                        <button class="btn-rechazar" onclick="gestionarPedidoAccion('rechazar')">Rechazar Pedido</button>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -609,6 +639,7 @@
         let correoTemporal = "";
         let keysEncontradas = [];
         let intervalosKeys = {};
+        let pedidoActualParaGestion = null;
 
         window.onload = function() {
             cargarPrefijos();
@@ -855,6 +886,18 @@
             return new Date().toLocaleString("es-CO", {timeZone: "America/Bogota"});
         }
 
+        function calcularFechaExpiracion(dias) {
+            const fecha = new Date();
+            fecha.setDate(fecha.getDate() + parseInt(dias));
+            const y = fecha.getFullYear();
+            const m = String(fecha.getMonth() + 1).padStart(2, '0');
+            const d = String(fecha.getDate()).padStart(2, '0');
+            const hh = String(fecha.getHours()).padStart(2, '0');
+            const mm = String(fecha.getMinutes()).padStart(2, '0');
+            const ss = String(fecha.getSeconds()).padStart(2, '0');
+            return `${y}-${m}-${d} ${hh}:${mm}:${ss}`;
+        }
+
         function actualizarCamposOcultos(metodo) {
             const email = localStorage.getItem('googleEmailDarkMatter') || "No login";
             const horaActual = obtenerHoraColombia();
@@ -912,6 +955,15 @@
             const caracteres = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
             let resultado = '#';
             for (let i = 0; i < 6; i++) {
+                resultado += caracteres.charAt(Math.floor(Math.random() * caracteres.length));
+            }
+            return resultado;
+        }
+
+        function generarKeyAleatoria(longitud) {
+            const caracteres = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+            let resultado = '';
+            for (let i = 0; i < longitud; i++) {
                 resultado += caracteres.charAt(Math.floor(Math.random() * caracteres.length));
             }
             return resultado;
@@ -1005,6 +1057,84 @@
                 contenedor.innerHTML = '<p style="text-align: center; color: var(--danger);">Error al conectar con el servidor.</p>';
                 console.error(error);
             }
+        }
+
+        async function buscarPedidoParaGestion() {
+            const codigoRaw = document.getElementById('inputCodigoGestion').value.trim();
+            const codigo = codigoRaw.replace('#', '');
+            const area = document.getElementById('areaDecisionPedido');
+            const info = document.getElementById('infoPedidoEncontrado');
+
+            if (codigo.length < 3) {
+                area.style.display = 'none';
+                return;
+            }
+
+            try {
+                const response = await fetch(`https://key-sistem-roblox-dm-default-rtdb.firebaseio.com/pedidos_admin/${codigo}.json`);
+                const data = await response.json();
+
+                if (data) {
+                    pedidoActualParaGestion = data;
+                    info.innerHTML = `
+                        <strong>Pedido:</strong> ${data.codigo}<br>
+                        <strong>Usuario:</strong> ${data.usuarioRoblox}<br>
+                        <strong>Correo:</strong> ${data.correo}<br>
+                        <strong>Días:</strong> ${data.dias}
+                    `;
+                    area.style.display = 'block';
+                } else {
+                    area.style.display = 'none';
+                    pedidoActualParaGestion = null;
+                }
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        async function gestionarPedidoAccion(accion) {
+            if (!pedidoActualParaGestion) return;
+
+            if (accion === 'aceptar') {
+                const nuevaKey = generarKeyAleatoria(30);
+                const fechaExp = calcularFechaExpiracion(pedidoActualParaGestion.dias);
+                
+                // Guardar Key en Firebase
+                await fetch(`https://key-sistem-roblox-dm-default-rtdb.firebaseio.com/keys/${nuevaKey}.json`, {
+                    method: "PUT",
+                    body: JSON.stringify({
+                        expira: fechaExp,
+                        dispositivo: pedidoActualParaGestion.marca,
+                        telefono: pedidoActualParaGestion.telefono,
+                        nombreRoblox: pedidoActualParaGestion.usuarioRoblox,
+                        correo: pedidoActualParaGestion.correo,
+                        costo: pedidoActualParaGestion.monto
+                    })
+                });
+
+                // Enviar correo de éxito
+                const templateParams = {
+                    to_email: pedidoActualParaGestion.correo,
+                    message: `🔥 GRACIAS POR COMPRAR DARKMATTER PANEL 🔥\n\nTu compra fue procesada correctamente y tu acceso ha sido activado.\n\n--------------------------------------------------\n\n🔑 KEY DE ACCESO\n${nuevaKey}\n\n🌐 PANEL DE CONTROL Y GESTIÓN\nAccede aquí para ver tus datos y afiliar personas:\nhttps://darkmatter-oficial.github.io/DarkMatter-Shop/\n\n📅 FECHA DE EXPIRACIÓN\n${fechaExp} hora militar colombia\n\n💰 COSTO DE ACCESO\n${pedidoActualParaGestion.monto}\n\n--------------------------------------------------\n\n👤 INFORMACIÓN DEL USUARIO\n\n🎮 Usuario Roblox\n${pedidoActualParaGestion.usuarioRoblox}\n\n📱 Dispositivo registrado\n${pedidoActualParaGestion.marca}\n\n📞 Teléfono\n${pedidoActualParaGestion.telefono}\n\n--------------------------------------------------\n\n📂 INFORMACIÓN DEL PANEL\n\nNombre: DARKMATTER\nCompatibilidad: Mobile\nTipo: Script Universal Shooters\n\n--------------------------------------------------\n\n📜 SCRIPT DE EJECUCIÓN\n\nloadstring(game:HttpGet("https://raw.githubusercontent.com/SergioYT01/DarkMatter_Key/refs/heads/main/DarkMatter_key.lua"))()\n\n--------------------------------------------------\n\n🎯 FUNCIONES PRINCIPALES\n\n👀 SISTEMA ESP\n- ESP Box\n- ESP Línea\n- ESP Distancia\n- ESP Nombre\n- ESP Barra de vida\n- Highlight ESP\n\n🎯 SISTEMA AIMBOT\n- Aimbot Mobile (auto lock)\n- Modos:\n  - Disimulado\n  - Directo\n  - Suave\n- FOV configurable\n\n🏃 SISTEMA DE MOVIMIENTO\n- Fly Hack\n- Speed Hack\n- Jump Hack\n- Spin Hack\n- Wallhack\n\n🚀 TELEPORT SYSTEM\n- Guardar posición\n- Teletransportarse\n- Teleport trasero\n\n🌀 SISTEMA DE ÓRBITA\n- Orbitar jugadores\n- Ajustar velocidad\n- Ajustar distancia\n\n--------------------------------------------------\n\n🔒 REGLAS DE USO\n\n- No compartas tu KEY con nadie.\n- Cada key es única.\n- Si la key se comparte puede ser desactivada.\n- Solo funciona en el dispositivo registrado.\n\n--------------------------------------------------\n\n💜 Disfruta tu acceso a DARKMATTER.`
+                };
+                await emailjs.send('service_hu31i2y', 'template_j7pyhsf', templateParams);
+                alert("Pedido ACEPTADO y Key enviada.");
+            } else {
+                // Enviar correo de rechazo
+                const templateParams = {
+                    to_email: pedidoActualParaGestion.correo,
+                    message: `Lo sentimos, su pedido ${pedidoActualParaGestion.codigo} para DARKMATTER ha sido RECHAZADO por inconsistencias en el pago.`
+                };
+                await emailjs.send('service_hu31i2y', 'template_j7pyhsf', templateParams);
+                alert("Pedido RECHAZADO.");
+            }
+
+            // Borrar de la lista de pendientes
+            await fetch(`https://key-sistem-roblox-dm-default-rtdb.firebaseio.com/pedidos_admin/${pedidoActualParaGestion.codigo.replace('#', '')}.json`, { method: "DELETE" });
+            
+            document.getElementById('inputCodigoGestion').value = "";
+            document.getElementById('areaDecisionPedido').style.display = 'none';
+            cargarPedidosAdmin();
         }
 
         async function limpiarPedidosAdmin() {
