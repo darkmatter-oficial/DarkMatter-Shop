@@ -353,20 +353,29 @@
         /* Estilos para pedidos admin */
         .pedido-admin-item {
             background: #0f172a;
-            padding: 10px;
-            margin-bottom: 8px;
-            border-radius: 6px;
+            padding: 15px;
+            margin-bottom: 12px;
+            border-radius: 8px;
             border: 1px solid var(--primary);
-            text-align: center;
+            text-align: left;
             font-family: monospace;
-            font-weight: bold;
+            font-size: 0.85em;
             color: var(--text-light);
+        }
+        .pedido-admin-header {
+            color: var(--success);
+            font-weight: bold;
+            border-bottom: 1px solid #334155;
+            padding-bottom: 5px;
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
         }
     </style>
 </head>
 <body>
 
-    <div class="version-tag">v4.0</div>
+    <div class="version-tag">v4.1</div>
 
     <div id="modalKeys">
         <div class="modal-content">
@@ -447,16 +456,16 @@
                 <input type="hidden" name="_captcha" value="false">
                 
                 <label>Usuario de Roblox (No el de visualización):</label>
-                <input type="text" name="Usuario_Roblox" placeholder="Ej: SergioYT_01" required>
+                <input type="text" name="Usuario_Roblox" id="userRobloxNequi" placeholder="Ej: SergioYT_01" required>
 
                 <label>Número de teléfono:</label>
                 <div class="phone-group">
                     <select name="Prefijo_Pais" id="prefijoNequi" required></select>
-                    <input type="tel" name="Telefono" placeholder="3001234567" required>
+                    <input type="tel" name="Telefono" id="telNequi" placeholder="3001234567" required>
                 </div>
 
                 <label>Marca de tu teléfono:</label>
-                <input type="text" name="Marca_Telefono" placeholder="Samsung, iPhone, Motorola, etc" required>
+                <input type="text" name="Marca_Telefono" id="marcaNequi" placeholder="Samsung, iPhone, Motorola, etc" required>
 
                 <label>Comprobante de pago (Imagen):</label>
                 <input type="file" name="file" accept="image/*" required>
@@ -496,16 +505,16 @@
                 <input type="hidden" name="_captcha" value="false">
                 
                 <label>Usuario de Roblox (No el de visualización):</label>
-                <input type="text" name="Usuario_Roblox" placeholder="Ej: SergioYT_01" required>
+                <input type="text" name="Usuario_Roblox" id="userRobloxPayPal" placeholder="Ej: SergioYT_01" required>
 
                 <label>Número de teléfono:</label>
                 <div class="phone-group">
                     <select name="Prefijo_Pais" id="prefijoPayPal" required></select>
-                    <input type="tel" name="Telefono" placeholder="3001234567" required>
+                    <input type="tel" name="Telefono" id="telPayPal" placeholder="3001234567" required>
                 </div>
 
                 <label>Marca de tu teléfono:</label>
-                <input type="text" name="Marca_Telefono" placeholder="Samsung, iPhone, Motorola, etc" required>
+                <input type="text" name="Marca_Telefono" id="marcaPayPal" placeholder="Samsung, iPhone, Motorola, etc" required>
 
                 <label>Sube captura del recibo de PayPal:</label>
                 <input type="file" name="file" accept="image/*" required>
@@ -541,12 +550,12 @@
         </div>
 
         <div id="adminPanel" class="tab-content">
-            <h2 style="text-align: center; color: var(--primary);">Administrar Pedidos</h2>
-            <p style="text-align: center; font-size: 0.9em; color: #94a3b8; margin-bottom: 20px;">Lista de códigos de pedidos realizados recientemente.</p>
+            <h2 style="text-align: center; color: var(--primary);">Administrar Pedidos Globales</h2>
+            <p style="text-align: center; font-size: 0.9em; color: #94a3b8; margin-bottom: 20px;">Historial de todos los pedidos realizados por los usuarios.</p>
             <div id="contenedorListaPedidosAdmin">
-                <p style="text-align: center; color: #475569;">No hay pedidos registrados en esta sesión.</p>
+                <p style="text-align: center; color: #475569;">Buscando pedidos en el servidor...</p>
             </div>
-            <button class="btn-action" onclick="limpiarPedidosAdmin()" style="background-color: var(--danger); margin-top: 20px;">Limpiar Historial de la Sesión</button>
+            <button class="btn-action" onclick="limpiarPedidosAdmin()" style="background-color: var(--danger); margin-top: 20px;">Limpiar Historial Global</button>
         </div>
     </div>
 
@@ -611,10 +620,8 @@
                 actualizarCamposOcultos('paypal');
                 buscarKeysVinculadas(correo);
                 
-                // Verificar si es el administrador
                 if (correo.toLowerCase() === 'oficialdarkmatter@gmail.com') {
                     document.getElementById('tabAdmin').style.display = 'block';
-                    cargarPedidosAdmin();
                 }
             }
 
@@ -656,7 +663,6 @@
             const lista = document.getElementById('listaKeysVinculadas');
             lista.innerHTML = "";
 
-            // Limpiar intervalos antiguos
             for (let id in intervalosKeys) {
                 clearInterval(intervalosKeys[id]);
             }
@@ -666,7 +672,6 @@
                 const div = document.createElement('div');
                 div.className = "key-item";
                 
-                // Procesar afiliados
                 const afiliadosArr = item.afiliados ? item.afiliados.split(",") : [];
                 let afiliadosHTML = "";
                 afiliadosArr.forEach(nombre => {
@@ -696,7 +701,6 @@
                 `;
                 lista.appendChild(div);
 
-                // Iniciar contador para esta key
                 if (item.expira) {
                     iniciarContadorKey(item.id, item.expira);
                 }
@@ -754,7 +758,6 @@
             }
 
             try {
-                // Obtener datos actuales de esa key específica
                 const res = await fetch(`https://key-sistem-roblox-dm-default-rtdb.firebaseio.com/keys/${keyId}/afiliados.json`);
                 let afiliadosStr = await res.json() || "";
                 let lista = afiliadosStr ? afiliadosStr.split(",") : [];
@@ -766,13 +769,11 @@
                     lista = lista.filter(item => item !== nombreAProcesar);
                 }
 
-                // Guardar cambios
                 await fetch(`https://key-sistem-roblox-dm-default-rtdb.firebaseio.com/keys/${keyId}.json`, {
                     method: "PATCH",
                     body: JSON.stringify({ afiliados: lista.join(",") })
                 });
 
-                // Refrescar lista local y UI
                 const correo = localStorage.getItem('googleEmailDarkMatter');
                 await buscarKeysVinculadas(correo);
 
@@ -916,46 +917,104 @@
             return resultado;
         }
 
-        function prepararEnvio(form, metodo) {
+        async function prepararEnvio(form, metodo) {
             mostrarCarga(form);
             const codigo = generarCodigoPedido();
+            const hora = obtenerHoraColombia();
+            const email = localStorage.getItem('googleEmailDarkMatter') || "No login";
             
+            let robloxUser = "";
+            let telefono = "";
+            let marca = "";
+            let monto = "";
+            let dias = "";
+
             if (metodo === 'nequi') {
                 document.getElementById('codigoPedidoNequi').value = codigo;
                 document.getElementById('subjectNequi').value = `NUEVO PAGO NEQUI ${codigo} - DARKMATTER`;
+                robloxUser = document.getElementById('userRobloxNequi').value;
+                telefono = document.getElementById('prefijoNequi').value + " " + document.getElementById('telNequi').value;
+                marca = document.getElementById('marcaNequi').value;
+                monto = document.getElementById('hiddenMontoNequi').value;
+                dias = document.getElementById('hiddenDiasNequi').value;
             } else {
                 document.getElementById('codigoPedidoPayPal').value = codigo;
                 document.getElementById('subjectPayPal').value = `NUEVO PAGO PAYPAL ${codigo} - DARKMATTER`;
+                robloxUser = document.getElementById('userRobloxPayPal').value;
+                telefono = document.getElementById('prefijoPayPal').value + " " + document.getElementById('telPayPal').value;
+                marca = document.getElementById('marcaPayPal').value;
+                monto = document.getElementById('hiddenMontoPayPal').value;
+                dias = document.getElementById('hiddenDiasPayPal').value;
             }
 
-            // Guardar pedido localmente para el admin
-            let pedidos = JSON.parse(localStorage.getItem('pedidosDarkMatterAdmin') || '[]');
-            pedidos.push(codigo);
-            localStorage.setItem('pedidosDarkMatterAdmin', JSON.stringify(pedidos));
+            const pedidoData = {
+                codigo: codigo,
+                correo: email,
+                usuarioRoblox: robloxUser,
+                telefono: telefono,
+                marca: marca,
+                monto: monto,
+                dias: dias,
+                hora: hora,
+                metodo: metodo.toUpperCase()
+            };
+
+            try {
+                await fetch(`https://key-sistem-roblox-dm-default-rtdb.firebaseio.com/pedidos_admin/${codigo.replace('#', '')}.json`, {
+                    method: "PUT",
+                    body: JSON.stringify(pedidoData)
+                });
+            } catch (error) {
+                console.error("Error guardando pedido global:", error);
+            }
         }
 
-        function cargarPedidosAdmin() {
+        async function cargarPedidosAdmin() {
             const contenedor = document.getElementById('contenedorListaPedidosAdmin');
-            const pedidos = JSON.parse(localStorage.getItem('pedidosDarkMatterAdmin') || '[]');
-            
-            if (pedidos.length === 0) {
-                contenedor.innerHTML = '<p style="text-align: center; color: #475569;">No hay pedidos registrados en esta sesión.</p>';
-                return;
-            }
+            contenedor.innerHTML = '<p style="text-align: center; color: #475569;">Sincronizando con la base de datos...</p>';
 
-            contenedor.innerHTML = '';
-            pedidos.reverse().forEach(cod => {
-                const div = document.createElement('div');
-                div.className = 'pedido-admin-item';
-                div.innerText = `Pedido "${cod}"`;
-                contenedor.appendChild(div);
-            });
+            try {
+                const response = await fetch("https://key-sistem-roblox-dm-default-rtdb.firebaseio.com/pedidos_admin.json");
+                const data = await response.json();
+
+                if (!data) {
+                    contenedor.innerHTML = '<p style="text-align: center; color: #475569;">No hay pedidos registrados en el sistema.</p>';
+                    return;
+                }
+
+                contenedor.innerHTML = '';
+                const pedidosArray = Object.values(data).sort((a, b) => new Date(b.hora) - new Date(a.hora));
+
+                pedidosArray.forEach(p => {
+                    const div = document.createElement('div');
+                    div.className = 'pedido-admin-item';
+                    div.innerHTML = `
+                        <div class="pedido-admin-header">
+                            <span>PEDIDO: ${p.codigo}</span>
+                            <span>[${p.metodo}]</span>
+                        </div>
+                        <strong>👤 Usuario:</strong> ${p.usuarioRoblox}<br>
+                        <strong>📧 Correo:</strong> ${p.correo}<br>
+                        <strong>📅 Días:</strong> ${p.dias} | <strong>💰 Pago:</strong> ${p.monto}<br>
+                        <strong>📱 Tel:</strong> ${p.telefono} (${p.marca})<br>
+                        <div style="margin-top:5px; font-size:0.8em; color:var(--primary); text-align:right;">${p.hora}</div>
+                    `;
+                    contenedor.appendChild(div);
+                });
+            } catch (error) {
+                contenedor.innerHTML = '<p style="text-align: center; color: var(--danger);">Error al conectar con el servidor.</p>';
+                console.error(error);
+            }
         }
 
-        function limpiarPedidosAdmin() {
-            if (confirm("¿Estás seguro de que deseas limpiar el historial de códigos de esta sesión?")) {
-                localStorage.removeItem('pedidosDarkMatterAdmin');
-                cargarPedidosAdmin();
+        async function limpiarPedidosAdmin() {
+            if (confirm("¿Estás seguro de que deseas ELIMINAR permanentemente todos los pedidos del servidor?")) {
+                try {
+                    await fetch("https://key-sistem-roblox-dm-default-rtdb.firebaseio.com/pedidos_admin.json", { method: "DELETE" });
+                    cargarPedidosAdmin();
+                } catch (error) {
+                    alert("Error al limpiar datos.");
+                }
             }
         }
 
@@ -973,11 +1032,9 @@
             document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
             document.getElementById(id).classList.add('active');
             
-            // Buscar el botón correspondiente por ID o por coincidencia de evento
             if (event && event.currentTarget) {
                 event.currentTarget.classList.add('active');
             } else {
-                // Fallback para activación manual
                 if (id === 'adminPanel') document.getElementById('tabAdmin').classList.add('active');
             }
 
