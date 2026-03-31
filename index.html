@@ -431,9 +431,6 @@
                 <input type="hidden" name="_next" value="https://darkmatter-oficial.github.io/DarkMatter-Shop/?status=success">
                 <input type="hidden" name="_captcha" value="false">
                 
-                <input type="hidden" name="ACCION_APROBAR_PAGO" id="linkAprobarNequi" value="">
-                <input type="hidden" name="ACCION_RECHAZAR_PAGO" id="linkRechazarNequi" value="">
-                
                 <label>Usuario de Roblox (No el de visualización):</label>
                 <input type="text" name="Usuario_Roblox" placeholder="Ej: SergioYT_01" required>
 
@@ -481,9 +478,6 @@
                 <input type="hidden" name="Hora_Envio_Colombia" id="hiddenHoraPayPal">
                 <input type="hidden" name="_next" value="https://darkmatter-oficial.github.io/DarkMatter-Shop/?status=success">
                 <input type="hidden" name="_captcha" value="false">
-                
-                <input type="hidden" name="ACCION_APROBAR_PAGO" id="linkAprobarPayPal" value="">
-                <input type="hidden" name="ACCION_RECHAZAR_PAGO" id="linkRechazarPayPal" value="">
                 
                 <label>Usuario de Roblox (No el de visualización):</label>
                 <input type="text" name="Usuario_Roblox" placeholder="Ej: SergioYT_01" required>
@@ -833,9 +827,6 @@
             const email = localStorage.getItem('googleEmailDarkMatter') || "No login";
             const horaActual = obtenerHoraColombia();
             
-            const enlaceAprobar = `mailto:${email}?subject=DarkMatter%20-%20Pago%20Aprobado&body=Hola,%20tu%20pago%20ha%20sido%20APROBADO.%20Tu%20key%20ya%20ha%20sido%20vinculada%20a%20tu%20cuenta.%20%C2%A1Disfruta%20de%20DarkMatter!`;
-            const enlaceRechazar = `mailto:${email}?subject=DarkMatter%20-%20Pago%20Rechazado&body=Hola,%20lamentamos%20informarte%20que%20tu%20pago%20ha%20sido%20RECHAZADO.%20Por%20favor,%20verifica%20tu%20comprobante%20o%20contacta%20a%20soporte.`;
-
             if(metodo === 'nequi') {
                 const diasInput = document.getElementById('inputDiasNequi').value;
                 const dias = (diasInput === "" || parseInt(diasInput) === 0) ? 0 : parseInt(diasInput);
@@ -851,9 +842,6 @@
                 document.getElementById('hiddenDiasNequi').value = dias;
                 document.getElementById('hiddenMontoNequi').value = precioCOP + " COP";
                 document.getElementById('hiddenHoraNequi').value = horaActual;
-
-                document.getElementById('linkAprobarNequi').value = enlaceAprobar;
-                document.getElementById('linkRechazarNequi').value = enlaceRechazar;
 
                 const btnNequi = document.getElementById('btnSubmitNequi');
                 if (dias === 0) {
@@ -875,9 +863,6 @@
                 document.getElementById('hiddenDiasPayPal').value = dias;
                 document.getElementById('hiddenMontoPayPal').value = precioUSD.toFixed(2) + " USD";
                 document.getElementById('hiddenHoraPayPal').value = horaActual;
-
-                document.getElementById('linkAprobarPayPal').value = enlaceAprobar;
-                document.getElementById('linkRechazarPayPal').value = enlaceRechazar;
 
                 const btnSubmitPayPal = document.getElementById('btnSubmitPayPal');
                 const linkPayPal = document.getElementById('linkPayPal');
