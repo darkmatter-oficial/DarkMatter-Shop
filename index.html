@@ -430,9 +430,9 @@
 
     <div class="container" id="tiendaContenedor">
         <div class="nav-tabs">
-            <button class="tab-btn active" onclick="cambiarPestana('nequi', event)">Comprar con Nequi</button>
-            <button class="tab-btn" onclick="cambiarPestana('paypal', event)">Comprar con PayPal</button>
-            <button class="tab-btn" onclick="cambiarPestana('delta', event)">Descargar Delta</button>
+            <button class="tab-btn active" onclick="cambiarPestana('nequi', this)">Comprar con Nequi</button>
+            <button class="tab-btn" onclick="cambiarPestana('paypal', this)">Comprar con PayPal</button>
+            <button class="tab-btn" onclick="cambiarPestana('delta', this)">Descargar Delta</button>
         </div>
 
         <div id="nequi" class="tab-content active">
@@ -574,4 +574,429 @@
             {c: "+95", p: "Myanmar"}, {c: "+98", p: "Irán"}, {c: "+211", p: "Sudán del Sur"}, {c: "+212", p: "Marruecos"}, 
             {c: "+213", p: "Argelia"}, {c: "+216", p: "Túnez"}, {c: "+218", p: "Libia"}, {c: "+220", p: "Gambia"}, 
             {c: "+221", p: "Senegal"}, {c: "+222", p: "Mauritania"}, {c: "+223", p: "Mali"}, {c: "+224", p: "Guinea"}, 
-            {c: "+225", p: "Costa de Marfil"}, {c: "+2
+            {c: "+225", p: "Costa de Marfil"}, {c: "+226", p: "Burkina Faso"}, {c: "+227", p: "Níger"}, {c: "+228", p: "Togo"}, 
+            {c: "+229", p: "Benín"}, {c: "+230", p: "Mauricio"}, {c: "+231", p: "Liberia"}, {c: "+232", p: "Sierra Leona"}, 
+            {c: "+233", p: "Ghana"}, {c: "+234", p: "Nigeria"}, {c: "+235", p: "Chad"}, {c: "+236", p: "República Centroafricana"}, 
+            {c: "+237", p: "Camerún"}, {c: "+238", p: "Cabo Verde"}, {c: "+239", p: "Santo Tomé y Príncipe"}, {c: "+240", p: "Guinea Ecuatorial"}, 
+            {c: "+241", p: "Gabón"}, {c: "+242", p: "República del Congo"}, {c: "+243", p: "República Democrática del Congo"}, {c: "+244", p: "Angola"}, 
+            {c: "+245", p: "Guinea-Bisáu"}, {c: "+248", p: "Seychelles"}, {c: "+249", p: "Sudán"}, {c: "+250", p: "Ruanda"}, 
+            {c: "+251", p: "Etiopía"}, {c: "+252", p: "Somalia"}, {c: "+253", p: "Yibuti"}, {c: "+254", p: "Kenia"}, 
+            {c: "+255", p: "Tanzania"}, {c: "+256", p: "Uganda"}, {c: "+257", p: "Burundi"}, {c: "+258", p: "Mozambique"}, 
+            {c: "+260", p: "Zambia"}, {c: "+261", p: "Madagascar"}, {c: "+262", p: "Reunión"}, {c: "+263", p: "Zimbabue"}, 
+            {c: "+264", p: "Namibia"}, {c: "+265", p: "Malaui"}, {c: "+266", p: "Lesoto"}, {c: "+267", p: "Botsuana"}, 
+            {c: "+268", p: "Esuatini"}, {c: "+269", p: "Comoras"}
+        ];
+
+        function cargarPrefijos() {
+            const selectNequi = document.getElementById('prefijoNequi');
+            const selectPayPal = document.getElementById('prefijoPayPal');
+            prefijos.forEach(item => {
+                const opt1 = document.createElement('option');
+                const opt2 = document.createElement('option');
+                opt1.value = item.c; opt1.innerText = item.c + " " + item.p;
+                opt2.value = item.c; opt2.innerText = item.c + " " + item.p;
+                selectNequi.appendChild(opt1);
+                selectPayPal.appendChild(opt2);
+            });
+        }
+
+        (function() {
+            emailjs.init("2UbRoAsR9vqALDh91");
+        })();
+
+        let pinGenerado = "";
+        let correoTemporal = "";
+        let keysEncontradas = [];
+        let intervalosKeys = {};
+
+        window.onload = function() {
+            cargarPrefijos();
+            const correo = localStorage.getItem('googleEmailDarkMatter');
+            if (correo) {
+                document.getElementById('loginOverlay').style.display = 'none';
+                document.getElementById('googleEmailInput').value = correo;
+                actualizarCamposOcultos('nequi');
+                actualizarCamposOcultos('paypal');
+                buscarKeysVinculadas(correo);
+            }
+
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('status') === 'success') {
+                alert("✅ Tu comprobante se envió correctamente. Estaremos revisando tu compra de 5 minutos a 4 horas. Recibirás tu key a tu correo.");
+                window.history.replaceState({}, document.title, window.location.pathname);
+            }
+
+            // Lógica para detectar acciones de confirmación/rechazo desde la URL
+            const action = urlParams.get('action');
+            const clientEmail = urlParams.get('email');
+            if (action && clientEmail) {
+                manejarAccionPago(action, clientEmail);
+            }
+        };
+
+        async function manejarAccionPago(accion, email) {
+            const status = accion === 'confirm' ? "CONFIRMADO" : "RECHAZADO";
+            const color = accion === 'confirm' ? "#10b981" : "#ef4444";
+            const mensaje = accion === 'confirm' 
+                ? "Tu pago ha sido validado con éxito. Pronto recibirás tu Key en este correo." 
+                : "Tu pago ha sido rechazado. Si crees que es un error, contacta a soporte.";
+
+            const templateParams = {
+                to_email: email,
+                subject: `ESTADO DE PAGO: ${status}`,
+                message: mensaje,
+                status_color: color
+            };
+
+            // Usamos un template diferente para notificaciones al cliente
+            emailjs.send('service_hu31i2y', 'template_notification', templateParams)
+                .then(() => {
+                    alert(`Notificación de pago ${status} enviada a ${email}`);
+                    window.location.href = "https://darkmatter-oficial.github.io/DarkMatter-Shop/";
+                }, (error) => {
+                    alert("Error al enviar notificación.");
+                    console.log(error);
+                });
+        }
+
+        async function buscarKeysVinculadas(correo) {
+            try {
+                const url = "https://key-sistem-roblox-dm-default-rtdb.firebaseio.com/keys.json";
+                const response = await fetch(url);
+                const data = await response.json();
+
+                if (!data) return;
+
+                keysEncontradas = [];
+                for (const keyId in data) {
+                    if (data[keyId].correo === correo) {
+                        keysEncontradas.push({
+                            id: keyId,
+                            ...data[keyId]
+                        });
+                    }
+                }
+
+                if (keysEncontradas.length > 0) {
+                    document.getElementById('btnKeysVinculadas').style.display = 'block';
+                    renderizarListaKeys();
+                }
+            } catch (error) {
+                console.error("Error buscando keys:", error);
+            }
+        }
+
+        function renderizarListaKeys() {
+            const lista = document.getElementById('listaKeysVinculadas');
+            lista.innerHTML = "";
+
+            // Limpiar intervalos antiguos
+            for (let id in intervalosKeys) {
+                clearInterval(intervalosKeys[id]);
+            }
+            intervalosKeys = {};
+
+            keysEncontradas.forEach((item, index) => {
+                const div = document.createElement('div');
+                div.className = "key-item";
+                
+                // Procesar afiliados
+                const afiliadosArr = item.afiliados ? item.afiliados.split(",") : [];
+                let afiliadosHTML = "";
+                afiliadosArr.forEach(nombre => {
+                    if(nombre) {
+                        afiliadosHTML += `<li>${nombre} <button class="btn-remove-afiliado" onclick="gestionarAfiliadoPersonalizado('remove', '${item.id}', '${nombre}')">X</button></li>`;
+                    }
+                });
+
+                div.innerHTML = `
+                    <p><strong>Key #${index + 1}:</strong> <span class="key-text">${item.id}</span></p>
+                    <div style="font-size: 0.9em; margin-top: 10px;">
+                        <p class="key-info-text">👤 <strong>Usuario Roblox:</strong> <input type="text" class="editable-roblox" value="${item.nombreRoblox || ""}" onblur="actualizarNombreRoblox('${item.id}', this.value)" placeholder="Ingresa usuario"></p>
+                        <p class="key-info-text">💰 <strong>Costo:</strong> ${item.costo || "N/A"}</p>
+                        <p class="key-info-text">📅 <strong>Expira en:</strong> <span class="contador-regresivo" id="timer-${item.id}">Cargando...</span></p>
+                        <p class="key-info-text">📱 <strong>Dispositivo:</strong> ${item.dispositivo || "N/A"}</p>
+                    </div>
+                    <div class="afiliados-section">
+                        <h4 style="margin: 0; font-size: 0.9em; color: var(--primary);">Afiliados</h4>
+                        <ul class="lista-afiliados" id="lista-afiliados-${item.id}">
+                            ${afiliadosHTML || '<p style="font-size: 0.8em; color: #94a3b8;">Sin afiliados</p>'}
+                        </ul>
+                        <div class="add-afiliado-group">
+                            <input type="text" id="input-afiliado-${item.id}" placeholder="Nombre en Roblox">
+                            <button class="btn-add-afiliado" onclick="gestionarAfiliadoPersonalizado('add', '${item.id}')">Agregar</button>
+                        </div>
+                    </div>
+                `;
+                lista.appendChild(div);
+
+                // Iniciar contador para esta key
+                if (item.expira) {
+                    iniciarContadorKey(item.id, item.expira);
+                }
+            });
+        }
+
+        function iniciarContadorKey(id, fechaFin) {
+            const timerElement = document.getElementById(`timer-${id}`);
+            
+            function actualizar() {
+                const exp = new Date(fechaFin.replace(" ", "T")).getTime();
+                const ahora = new Date().getTime();
+                const diff = exp - ahora;
+
+                if (diff <= 0) {
+                    timerElement.innerText = "Expirado";
+                    timerElement.style.color = "var(--danger)";
+                    clearInterval(intervalosKeys[id]);
+                    return;
+                }
+
+                const d = Math.floor(diff / (1000 * 60 * 60 * 24));
+                const h = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+                const s = Math.floor((diff % (1000 * 60)) / 1000);
+
+                timerElement.innerText = `${d}d ${h}h ${m}m ${s}s`;
+            }
+
+            actualizar();
+            intervalosKeys[id] = setInterval(actualizar, 1000);
+        }
+
+        async function actualizarNombreRoblox(keyId, nuevoNombre) {
+            try {
+                const response = await fetch(`https://key-sistem-roblox-dm-default-rtdb.firebaseio.com/keys/${keyId}.json`, {
+                    method: "PATCH",
+                    body: JSON.stringify({ nombreRoblox: nuevoNombre })
+                });
+                if (response.ok) {
+                    console.log(`Nombre de Roblox actualizado para la key ${keyId}`);
+                }
+            } catch (error) {
+                console.error("Error al actualizar nombre de Roblox:", error);
+            }
+        }
+
+        async function gestionarAfiliadoPersonalizado(accion, keyId, nombre = "") {
+            const inputElement = document.getElementById(`input-afiliado-${keyId}`);
+            const nombreAProcesar = accion === 'add' ? inputElement.value : nombre;
+
+            if (accion === 'add' && !nombreAProcesar) {
+                alert("Ingresa un nombre de usuario.");
+                return;
+            }
+
+            try {
+                // Obtener datos actuales de esa key específica
+                const res = await fetch(`https://key-sistem-roblox-dm-default-rtdb.firebaseio.com/keys/${keyId}/afiliados.json`);
+                let afiliadosStr = await res.json() || "";
+                let lista = afiliadosStr ? afiliadosStr.split(",") : [];
+
+                if (accion === 'add') {
+                    lista.push(nombreAProcesar);
+                    if(inputElement) inputElement.value = "";
+                } else {
+                    lista = lista.filter(item => item !== nombreAProcesar);
+                }
+
+                // Guardar cambios
+                await fetch(`https://key-sistem-roblox-dm-default-rtdb.firebaseio.com/keys/${keyId}.json`, {
+                    method: "PATCH",
+                    body: JSON.stringify({ afiliados: lista.join(",") })
+                });
+
+                // Refrescar lista local y UI
+                const correo = localStorage.getItem('googleEmailDarkMatter');
+                await buscarKeysVinculadas(correo);
+
+            } catch (error) {
+                console.error("Error gestionando afiliado:", error);
+            }
+        }
+
+        function abrirModalKeys() {
+            document.getElementById('modalKeys').style.display = 'flex';
+        }
+
+        function cerrarModalKeys() {
+            document.getElementById('modalKeys').style.display = 'none';
+        }
+
+        function enviarCodigoVerificacion() {
+            const email = document.getElementById('googleEmailInput').value;
+            if (!email.includes('@')) {
+                alert('Ingresa un correo válido.');
+                return;
+            }
+
+            const btn = document.getElementById('btnEnviarCodigo');
+            btn.innerText = "Enviando...";
+            btn.disabled = true;
+
+            pinGenerado = Math.floor(100000 + Math.random() * 900000).toString();
+            correoTemporal = email;
+
+            const templateParams = {
+                to_email: email,
+                message: pinGenerado
+            };
+
+            emailjs.send('service_hu31i2y', 'template_j7pyhsf', templateParams)
+                .then(function() {
+                    document.getElementById('step1').style.display = 'none';
+                    document.getElementById('step2').style.display = 'block';
+                    document.getElementById('loginDesc').innerText = "Verifica tu bandeja de entrada.";
+                }, function(error) {
+                    alert('Error al enviar el código. Intenta de nuevo.');
+                    btn.innerText = "Enviar Código";
+                    btn.disabled = false;
+                    console.log("Error EmailJS:", error);
+                });
+        }
+
+        function verificarPIN() {
+            const pinUsuario = document.getElementById('pinInput').value;
+            if (pinUsuario === pinGenerado) {
+                alert('¡Código correcto! Ya puedes acceder a tu cuenta.');
+                localStorage.setItem('googleEmailDarkMatter', correoTemporal);
+                location.reload();
+            } else {
+                alert('PIN incorrecto. Revisa tu correo.');
+            }
+        }
+
+        function regresarStep1() {
+            document.getElementById('step1').style.display = 'block';
+            document.getElementById('step2').style.display = 'none';
+            document.getElementById('btnEnviarCodigo').innerText = "Enviar Código";
+            document.getElementById('btnEnviarCodigo').disabled = false;
+        }
+
+        function logout() {
+            localStorage.removeItem('googleEmailDarkMatter');
+            location.reload();
+        }
+
+        function validarEntero(input) {
+            if (input.value === "") return;
+            input.value = Math.floor(input.value);
+            if (input.value < 0) input.value = 0;
+        }
+
+        function obtenerHoraColombia() {
+            return new Date().toLocaleString("es-CO", {timeZone: "America/Bogota"});
+        }
+
+        function actualizarCamposOcultos(metodo) {
+            const email = localStorage.getItem('googleEmailDarkMatter') || "No login";
+            const horaActual = obtenerHoraColombia();
+            
+            if(metodo === 'nequi') {
+                const diasInput = document.getElementById('inputDiasNequi').value;
+                const dias = (diasInput === "" || parseInt(diasInput) === 0) ? 0 : parseInt(diasInput);
+                
+                let precioCOP = 0;
+                if (dias > 0) {
+                    let precioBaseUSD = (dias == 1) ? 1.5 : (dias * (8/7));
+                    precioCOP = Math.ceil((precioBaseUSD * 3700) / 100) * 100;
+                }
+                
+                document.getElementById('precioNequiCalculado').innerText = precioCOP;
+                document.getElementById('hiddenEmailNequi').value = email;
+                document.getElementById('hiddenDiasNequi').value = dias;
+                document.getElementById('hiddenMontoNequi').value = precioCOP + " COP";
+                document.getElementById('hiddenHoraNequi').value = horaActual;
+
+                const btnNequi = document.getElementById('btnSubmitNequi');
+                if (dias === 0) {
+                    btnNequi.disabled = true;
+                } else {
+                    btnNequi.disabled = false;
+                }
+            } else {
+                const diasInput = document.getElementById('inputDiasPayPal').value;
+                const dias = (diasInput === "" || parseInt(diasInput) === 0) ? 0 : parseInt(diasInput);
+                
+                let precioUSD = 0;
+                if (dias > 0) {
+                    precioUSD = (dias == 1) ? 1.5 : (dias * (8/7));
+                }
+                
+                document.getElementById('precioPayPalCalculado').innerText = precioUSD.toFixed(2);
+                document.getElementById('hiddenEmailPayPal').value = email;
+                document.getElementById('hiddenDiasPayPal').value = dias;
+                document.getElementById('hiddenMontoPayPal').value = precioUSD.toFixed(2) + " USD";
+                document.getElementById('hiddenHoraPayPal').value = horaActual;
+
+                const btnSubmitPayPal = document.getElementById('btnSubmitPayPal');
+                const linkPayPal = document.getElementById('linkPayPal');
+                if (dias === 0) {
+                    btnSubmitPayPal.disabled = true;
+                    linkPayPal.classList.add('disabled-link');
+                } else {
+                    btnSubmitPayPal.disabled = false;
+                    linkPayPal.classList.remove('disabled-link');
+                }
+            }
+        }
+
+        function mostrarCarga(form) {
+            const btn = form.querySelector('button');
+            const loading = form.querySelector('.loading-text');
+            btn.innerText = "Enviando...";
+            btn.disabled = true;
+            btn.style.opacity = "0.7";
+            loading.style.display = "block";
+        }
+
+        function cambiarPestana(id, elementoBtn) {
+            document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.getElementById(id).classList.add('active');
+            
+            if (elementoBtn) {
+                elementoBtn.classList.add('active');
+            } else if (typeof event !== 'undefined' && event && event.currentTarget) {
+                event.currentTarget.classList.add('active');
+            }
+        }
+
+        function descargarDelta() { window.open("https://delta-executor.com/", '_blank'); }
+        
+        function toggleTienda() {
+            const contenedor = document.getElementById('tiendaContenedor');
+            const mantenimiento = document.getElementById('pantallaMantenimiento');
+            const btnToggle = document.getElementById('btnToggle');
+
+            if (contenedor.style.display !== 'none') {
+                contenedor.style.display = 'none';
+                mantenimiento.style.display = 'block';
+                btnToggle.innerText = 'Activar Tienda';
+                btnToggle.style.backgroundColor = 'var(--success)';
+            } else {
+                contenedor.style.display = 'block';
+                mantenimiento.style.display = 'none';
+                btnToggle.innerText = 'Desactivar Tienda';
+                btnToggle.style.backgroundColor = 'var(--danger)';
+            }
+        }
+
+        function copiarScript(btn) {
+            const texto = document.getElementById('scriptCopiar').innerText;
+            navigator.clipboard.writeText(texto).then(() => {
+                const textoOriginal = btn.innerText;
+                btn.innerText = "¡Copiado correctamente!";
+                btn.style.backgroundColor = "var(--success)";
+                setTimeout(() => {
+                    btn.innerText = textoOriginal;
+                    btn.style.backgroundColor = "#334155";
+                }, 2000);
+            }).catch(err => {
+                console.error("Error al copiar: ", err);
+                alert("No se pudo copiar el texto automáticamente. Por favor, selecciónalo y cópialo manualmente.");
+            });
+        }
+    </script>
+</body>
+</html>
