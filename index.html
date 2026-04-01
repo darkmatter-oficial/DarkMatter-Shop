@@ -13,7 +13,7 @@
             --card-bg: #1e293b;
             --text-light: #f8fafc;
             --danger: #ef4444;
-            --success: #10 b981;
+            --success: #10b981;
         }
 
         body {
@@ -1110,19 +1110,19 @@
                         method: "PUT",
                         body: JSON.stringify(pedidoData)
                     });
-                    
-                    // Notificar al dueño por EmailJS sobre la nueva compra
-                    const adminNotification = {
+
+                    // Notificación de nueva compra al administrador
+                    const templateParamsAdmin = {
                         to_email: 'oficialdarkmatter@gmail.com',
-                        message: `Alguien hizo una nueva compra: ${codigo}`
+                        message: codigo
                     };
-                    await emailjs.send('service_hu31i2y', 'template_7xutlds', adminNotification);
+                    await emailjs.send('service_hu31i2y', 'template_7xutlds', templateParamsAdmin);
 
                     alert("✅ Tu comprobante se envió correctamente. Estaremos revisando tu compra de 5 minutos a 4 horas. Recibirás tu key a tu correo.");
                     form.reset();
                     ocultarCarga(form);
                 } catch (error) {
-                    console.error("Error guardando pedido global:", error);
+                    console.error("Error guardando pedido global o enviando correo:", error);
                     alert("Ocurrió un error al enviar el comprobante. Por favor intenta de nuevo.");
                     ocultarCarga(form);
                 }
