@@ -461,15 +461,12 @@
             </div>
 
             <hr>
-            <form id="formNequi" action="https://formsubmit.co/oficialdarkmatter@gmail.com" method="POST" enctype="multipart/form-data" onsubmit="prepararEnvio(this, 'nequi')">
-                <input type="hidden" name="_subject" id="subjectNequi" value="NUEVO PAGO NEQUI - DARKMATTER">
+            <form id="formNequi" onsubmit="event.preventDefault(); prepararEnvio(this, 'nequi')">
                 <input type="hidden" name="Codigo_Pedido" id="codigoPedidoNequi">
                 <input type="hidden" name="Comprador_Correo" id="hiddenEmailNequi">
                 <input type="hidden" name="Dias_Comprados" id="hiddenDiasNequi" value="1">
                 <input type="hidden" name="Monto_Pagado" id="hiddenMontoNequi" value="5550 COP">
                 <input type="hidden" name="Hora_Envio_Colombia" id="hiddenHoraNequi">
-                <input type="hidden" name="_next" value="https://darkmatter-oficial.github.io/DarkMatter-Shop/?status=success">
-                <input type="hidden" name="_captcha" value="false">
                 
                 <label>Usuario de Roblox (No el de visualización):</label>
                 <input type="text" name="Usuario_Roblox" id="userRobloxNequi" placeholder="Ej: SergioYT_01" required>
@@ -484,7 +481,7 @@
                 <input type="text" name="Marca_Telefono" id="marcaNequi" placeholder="Samsung, iPhone, Motorola, etc" required>
 
                 <label>Comprobante de pago (Imagen):</label>
-                <input type="file" name="file" accept="image/*" required>
+                <input type="file" id="fileNequi" name="file" accept="image/*" required>
                 
                 <button type="submit" id="btnSubmitNequi" class="btn-action">Enviar Comprobante</button>
                 <div class="loading-text">Subiendo comprobante, por favor espera...</div>
@@ -510,15 +507,12 @@
             <a href="https://www.paypal.com/ncp/payment/2PEESZKA2QMNE" id="linkPayPal" target="_blank" class="btn-action" style="background-color: #0070ba; margin-top: 15px;">Pagar con PayPal</a>
 
             <hr>
-            <form id="formPayPal" action="https://formsubmit.co/oficialdarkmatter@gmail.com" method="POST" enctype="multipart/form-data" onsubmit="prepararEnvio(this, 'paypal')">
-                <input type="hidden" name="_subject" id="subjectPayPal" value="NUEVO PAGO PAYPAL - DARKMATTER">
+            <form id="formPayPal" onsubmit="event.preventDefault(); prepararEnvio(this, 'paypal')">
                 <input type="hidden" name="Codigo_Pedido" id="codigoPedidoPayPal">
                 <input type="hidden" name="Comprador_Correo" id="hiddenEmailPayPal">
                 <input type="hidden" name="Dias_Comprados" id="hiddenDiasPayPal" value="1">
                 <input type="hidden" name="Monto_Pagado" id="hiddenMontoPayPal" value="1.50 USD">
                 <input type="hidden" name="Hora_Envio_Colombia" id="hiddenHoraPayPal">
-                <input type="hidden" name="_next" value="https://darkmatter-oficial.github.io/DarkMatter-Shop/?status=success">
-                <input type="hidden" name="_captcha" value="false">
                 
                 <label>Usuario de Roblox (No el de visualización):</label>
                 <input type="text" name="Usuario_Roblox" id="userRobloxPayPal" placeholder="Ej: SergioYT_01" required>
@@ -533,7 +527,7 @@
                 <input type="text" name="Marca_Telefono" id="marcaPayPal" placeholder="Samsung, iPhone, Motorola, etc" required>
 
                 <label>Sube captura del recibo de PayPal:</label>
-                <input type="file" name="file" accept="image/*" required>
+                <input type="file" id="filePayPal" name="file" accept="image/*" required>
                 
                 <button type="submit" id="btnSubmitPayPal" class="btn-action">Enviar Comprobante</button>
                 <div class="loading-text">Subiendo comprobante, por favor espera...</div>
@@ -992,23 +986,24 @@
             let marca = "";
             let monto = "";
             let dias = "";
+            let fileInputId = "";
 
             if (metodo === 'nequi') {
                 document.getElementById('codigoPedidoNequi').value = codigo;
-                document.getElementById('subjectNequi').value = `NUEVO PAGO NEQUI ${codigo} - DARKMATTER`;
                 robloxUser = document.getElementById('userRobloxNequi').value;
                 telefono = document.getElementById('prefijoNequi').value + " " + document.getElementById('telNequi').value;
                 marca = document.getElementById('marcaNequi').value;
                 monto = document.getElementById('hiddenMontoNequi').value;
                 dias = document.getElementById('hiddenDiasNequi').value;
+                fileInputId = "fileNequi";
             } else {
                 document.getElementById('codigoPedidoPayPal').value = codigo;
-                document.getElementById('subjectPayPal').value = `NUEVO PAGO PAYPAL ${codigo} - DARKMATTER`;
                 robloxUser = document.getElementById('userRobloxPayPal').value;
                 telefono = document.getElementById('prefijoPayPal').value + " " + document.getElementById('telPayPal').value;
                 marca = document.getElementById('marcaPayPal').value;
                 monto = document.getElementById('hiddenMontoPayPal').value;
                 dias = document.getElementById('hiddenDiasPayPal').value;
+                fileInputId = "filePayPal";
             }
 
             const pedidoData = {
@@ -1024,12 +1019,41 @@
             };
 
             try {
+                // Guardar en Firebase pedidos_admin
                 await fetch(`https://key-sistem-roblox-dm-default-rtdb.firebaseio.com/pedidos_admin/${codigo.replace('#', '')}.json`, {
                     method: "PUT",
                     body: JSON.stringify(pedidoData)
                 });
+
+                // Enviar comprobante por EmailJS
+                const file = document.getElementById(fileInputId).files[0];
+                const reader = new FileReader();
+
+                reader.onload = async function() {
+                    const base64data = reader.result;
+                    const templateParams = {
+                        subject: `NUEVO PAGO ${metodo.toUpperCase()} ${codigo}`,
+                        codigo_pedido: codigo,
+                        comprador_correo: email,
+                        usuario_roblox: robloxUser,
+                        telefono: telefono,
+                        marca_telefono: marca,
+                        monto_pagado: monto,
+                        dias_comprados: dias,
+                        hora_envio: hora,
+                        content: base64data
+                    };
+
+                    await emailjs.send('service_hu31i2y', 'template_7xutlds', templateParams);
+                    alert("✅ Tu comprobante se envió correctamente. Estaremos revisando tu compra de 5 minutos a 4 horas. Recibirás tu key a tu correo.");
+                    location.reload();
+                };
+                reader.readAsDataURL(file);
+
             } catch (error) {
-                console.error("Error guardando pedido global:", error);
+                console.error("Error procesando envío:", error);
+                alert("Ocurrió un error al enviar el comprobante. Por favor intenta de nuevo.");
+                location.reload();
             }
         }
 
