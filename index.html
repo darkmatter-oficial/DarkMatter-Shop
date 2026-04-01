@@ -653,6 +653,7 @@
                 
                 if (correo.toLowerCase() === 'oficialdarkmatter@gmail.com') {
                     document.getElementById('tabAdmin').style.display = 'block';
+                    document.getElementById('btnToggle').style.display = 'block';
                 }
             }
 
@@ -1025,30 +1026,32 @@
                     body: JSON.stringify(pedidoData)
                 });
 
-                // Enviar comprobante por EmailJS
+                // Convertir FileReader en Promesa para manejar errores si falla EmailJS
                 const file = document.getElementById(fileInputId).files[0];
-                const reader = new FileReader();
+                
+                const base64data = await new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onload = () => resolve(reader.result);
+                    reader.onerror = error => reject(error);
+                    reader.readAsDataURL(file);
+                });
 
-                reader.onload = async function() {
-                    const base64data = reader.result;
-                    const templateParams = {
-                        subject: `NUEVO PAGO ${metodo.toUpperCase()} ${codigo}`,
-                        codigo_pedido: codigo,
-                        comprador_correo: email,
-                        usuario_roblox: robloxUser,
-                        telefono: telefono,
-                        marca_telefono: marca,
-                        monto_pagado: monto,
-                        dias_comprados: dias,
-                        hora_envio: hora,
-                        content: base64data
-                    };
-
-                    await emailjs.send('service_hu31i2y', 'template_7xutlds', templateParams);
-                    alert("✅ Tu comprobante se envió correctamente. Estaremos revisando tu compra de 5 minutos a 4 horas. Recibirás tu key a tu correo.");
-                    location.reload();
+                const templateParams = {
+                    subject: `NUEVO PAGO ${metodo.toUpperCase()} ${codigo}`,
+                    codigo_pedido: codigo,
+                    comprador_correo: email,
+                    usuario_roblox: robloxUser,
+                    telefono: telefono,
+                    marca_telefono: marca,
+                    monto_pagado: monto,
+                    dias_comprados: dias,
+                    hora_envio: hora,
+                    content: base64data
                 };
-                reader.readAsDataURL(file);
+
+                await emailjs.send('service_hu31i2y', 'template_7xutlds', templateParams);
+                alert("✅ Tu comprobante se envió correctamente. Estaremos revisando tu compra de 5 minutos a 4 horas. Recibirás tu key a tu correo.");
+                location.reload();
 
             } catch (error) {
                 console.error("Error procesando envío:", error);
@@ -1223,7 +1226,24 @@
         }
 
         function descargarDelta() { window.open("https://delta-executor.com/", '_blank'); }
-        function toggleTienda() {}
+        
+        function toggleTienda() {
+            const tienda = document.getElementById('tiendaContenedor');
+            const mantenimiento = document.getElementById('pantallaMantenimiento');
+            const btn = document.getElementById('btnToggle');
+            
+            if (tienda.style.display === 'none') {
+                tienda.style.display = 'block';
+                mantenimiento.style.display = 'none';
+                btn.innerText = 'Desactivar Tienda';
+                btn.style.backgroundColor = 'var(--danger)';
+            } else {
+                tienda.style.display = 'none';
+                mantenimiento.style.display = 'block';
+                btn.innerText = 'Activar Tienda';
+                btn.style.backgroundColor = 'var(--success)';
+            }
+        }
 
         function copiarScript(btn) {
             const texto = document.getElementById('scriptCopiar').innerText;
