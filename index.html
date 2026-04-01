@@ -13,7 +13,7 @@
             --card-bg: #1e293b;
             --text-light: #f8fafc;
             --danger: #ef4444;
-            --success: #10b981;
+            --success: #10 b981;
         }
 
         body {
@@ -1110,6 +1110,14 @@
                         method: "PUT",
                         body: JSON.stringify(pedidoData)
                     });
+                    
+                    // Notificar al dueño por EmailJS sobre la nueva compra
+                    const adminNotification = {
+                        to_email: 'oficialdarkmatter@gmail.com',
+                        message: `Alguien hizo una nueva compra: ${codigo}`
+                    };
+                    await emailjs.send('service_hu31i2y', 'template_7xutlds', adminNotification);
+
                     alert("✅ Tu comprobante se envió correctamente. Estaremos revisando tu compra de 5 minutos a 4 horas. Recibirás tu key a tu correo.");
                     form.reset();
                     ocultarCarga(form);
