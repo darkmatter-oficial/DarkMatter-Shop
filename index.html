@@ -1297,7 +1297,7 @@ El Equipo de DarkMatter.
                 await emailjs.send('service_hu31i2y', 'template_7xutlds', templateParams);
                 alert("Pedido ACEPTADO.");
             } else {
-                const mensajeRechazo = `⚠️ ACTUALIZACIÓN DE PEDIDO - DARKMATTER SHOP ⚠️\n\nEstimado usuario,\n\nLamentamos informarle que su pedido con el código #${pedidoActualParaGestion.codigo} ha sido RECHAZADO tras la revisión manual de nuestro equipo.\n\nEsto puede deberse a que el comprobante de pago no es válido, no coincide con el monto esperado, o la imagen no es legible. Si considera que esto es un error o desea intentar nuevamente, por favor envíe un comprobante claro a través de nuestra página web.\n\nAtentamente,\nEl equipo de DarkMatter Shop.`;
+                const mensajeRechazo = `⚠️ ACTUALIZACIÓN DE PEDIDO - DARKMATTER SHOP ⚠️\n\nEstimado usuario,\n\nLamentamos informarle que su pedido con el código ${pedidoActualParaGestion.codigo} ha sido RECHAZADO tras la revisión manual de nuestro equipo.\n\nEsto puede deberse a que el comprobante de pago no es válido, no coincide con el monto esperado, o la imagen no es legible. Si considera que esto es un error o desea intentar nuevamente, por favor envíe un comprobante claro a través de nuestra página web.\n\nAtentamente,\nEl equipo de DarkMatter Shop.`;
                 
                 const templateParams = {
                     to_email: pedidoActualParaGestion.correo,
