@@ -1234,9 +1234,105 @@
                     })
                 });
 
+                const mensajePersonalizado = `🔥 GRACIAS POR COMPRAR DARKMATTER PANEL 🔥
+
+Tu compra fue procesada correctamente y tu acceso ha sido activado.
+
+--------------------------------------------------
+
+🔑 KEY DE ACCESO
+${nuevaKey}
+
+🌐 PANEL DE CONTROL Y GESTIÓN
+Accede aquí para ver tus datos y afiliar personas:
+https://darkmatter-oficial.github.io/DarkMatter-Shop/
+
+📅 FECHA DE EXPIRACIÓN
+${fechaExp} hora militar colombia
+
+💰 COSTO DE ACCESO
+${pedidoActualParaGestion.monto}
+
+--------------------------------------------------
+
+👤 INFORMACIÓN DEL USUARIO
+
+🎮 Usuario Roblox
+${pedidoActualParaGestion.usuarioRoblox}
+
+📱 Dispositivo registrado
+${pedidoActualParaGestion.marca}
+
+📞 Teléfono
+${pedidoActualParaGestion.telefono}
+
+--------------------------------------------------
+
+📂 INFORMACIÓN DEL PANEL
+
+Nombre: DARKMATTER
+Compatibilidad: Mobile
+Tipo: Script Universal Shooters
+
+--------------------------------------------------
+
+📜 SCRIPT DE EJECUCIÓN
+
+loadstring(game:HttpGet("https://raw.githubusercontent.com/SergioYT01/DarkMatter_Key/refs/heads/main/DarkMatter_key.lua"))()
+
+--------------------------------------------------
+
+🎯 FUNCIONES PRINCIPALES
+
+👀 SISTEMA ESP
+- ESP Box
+- ESP Línea
+- ESP Distancia
+- ESP Nombre
+- ESP Barra de vida
+- Highlight ESP
+
+🎯 SISTEMA AIMBOT
+- Aimbot Mobile (auto lock)
+- Modos:
+  - Disimulado
+  - Directo
+  - Suave
+- FOV configurable
+
+🏃 SISTEMA DE MOVIMIENTO
+- Fly Hack
+- Speed Hack
+- Jump Hack
+- Spin Hack
+- Wallhack
+
+🚀 TELEPORT SYSTEM
+- Guardar posición
+- Teletransportarse
+- Teleport trasero
+
+🌀 SISTEMA DE ÓRBITA
+- Orbitar jugadores
+- Ajustar velocidad
+- Ajustar distancia
+
+--------------------------------------------------
+
+🔒 REGLAS DE USO
+
+- No compartas tu KEY con nadie.
+- Cada key es única.
+- Si la key se comparte puede ser desactivada.
+- Solo funciona en el dispositivo registrado.
+
+--------------------------------------------------
+
+💜 Disfruta tu acceso a DARKMATTER.`;
+
                 const templateParams = {
                     to_email: pedidoActualParaGestion.correo,
-                    message: `🔥 GRACIAS POR COMPRAR DARKMATTER PANEL 🔥\n\nTu acceso ha sido activado.\n\n🔑 KEY DE ACCESO\n${nuevaKey}\n\n📅 EXPIRACIÓN: ${fechaExp}\n\n💰 PAGO: ${pedidoActualParaGestion.monto}\n\n🎯 SCRIPT:\nloadstring(game:HttpGet("https://raw.githubusercontent.com/SergioYT01/DarkMatter_Key/refs/heads/main/DarkMatter_key.lua"))()`
+                    message: mensajePersonalizado
                 };
                 await emailjs.send('service_hu31i2y', 'template_7xutlds', templateParams);
                 alert("Pedido ACEPTADO.");
