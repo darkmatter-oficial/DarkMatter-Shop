@@ -429,7 +429,7 @@
             <button id="btnLogout" class="btn-logout" onclick="logout()">Cerrar Sesión</button>
             <button class="tab-btn" id="tabAdmin" onclick="cambiarPestana('adminPanel')" style="display: none; background-color: #475569; font-size: 0.8em; padding: 8px 12px; border: none; font-weight: bold; width: auto; flex: none;">Administrar Pedidos</button>
         </div>
-        <button class="btn-toggle" id="btnToggle" onclick="toggleTienda()" style="display: none;">Desactivar Tienda</button>
+        <button class="btn-toggle" id="btnToggle" onclick="toggleTienda()">Desactivar Tienda</button>
     </div>
 
     <div id="pantallaMantenimiento">
@@ -461,15 +461,12 @@
             </div>
 
             <hr>
-            <form id="formNequi" action="https://formsubmit.co/oficialdarkmatter@gmail.com" method="POST" enctype="multipart/form-data" onsubmit="prepararEnvio(this, 'nequi')">
-                <input type="hidden" name="_subject" id="subjectNequi" value="NUEVO PAGO NEQUI - DARKMATTER">
+            <form id="formNequi" onsubmit="prepararEnvio(event, this, 'nequi')">
                 <input type="hidden" name="Codigo_Pedido" id="codigoPedidoNequi">
                 <input type="hidden" name="Comprador_Correo" id="hiddenEmailNequi">
                 <input type="hidden" name="Dias_Comprados" id="hiddenDiasNequi" value="1">
                 <input type="hidden" name="Monto_Pagado" id="hiddenMontoNequi" value="5550 COP">
                 <input type="hidden" name="Hora_Envio_Colombia" id="hiddenHoraNequi">
-                <input type="hidden" name="_next" value="https://darkmatter-oficial.github.io/DarkMatter-Shop/?status=success">
-                <input type="hidden" name="_captcha" value="false">
                 
                 <label>Usuario de Roblox (No el de visualización):</label>
                 <input type="text" name="Usuario_Roblox" id="userRobloxNequi" placeholder="Ej: SergioYT_01" required>
@@ -510,15 +507,12 @@
             <a href="https://www.paypal.com/ncp/payment/2PEESZKA2QMNE" id="linkPayPal" target="_blank" class="btn-action" style="background-color: #0070ba; margin-top: 15px;">Pagar con PayPal</a>
 
             <hr>
-            <form id="formPayPal" action="https://formsubmit.co/oficialdarkmatter@gmail.com" method="POST" enctype="multipart/form-data" onsubmit="prepararEnvio(this, 'paypal')">
-                <input type="hidden" name="_subject" id="subjectPayPal" value="NUEVO PAGO PAYPAL - DARKMATTER">
+            <form id="formPayPal" onsubmit="prepararEnvio(event, this, 'paypal')">
                 <input type="hidden" name="Codigo_Pedido" id="codigoPedidoPayPal">
                 <input type="hidden" name="Comprador_Correo" id="hiddenEmailPayPal">
                 <input type="hidden" name="Dias_Comprados" id="hiddenDiasPayPal" value="1">
                 <input type="hidden" name="Monto_Pagado" id="hiddenMontoPayPal" value="1.50 USD">
                 <input type="hidden" name="Hora_Envio_Colombia" id="hiddenHoraPayPal">
-                <input type="hidden" name="_next" value="https://darkmatter-oficial.github.io/DarkMatter-Shop/?status=success">
-                <input type="hidden" name="_captcha" value="false">
                 
                 <label>Usuario de Roblox (No el de visualización):</label>
                 <input type="text" name="Usuario_Roblox" id="userRobloxPayPal" placeholder="Ej: SergioYT_01" required>
@@ -659,6 +653,7 @@
                 
                 if (correo.toLowerCase() === 'oficialdarkmatter@gmail.com') {
                     document.getElementById('tabAdmin').style.display = 'block';
+                    document.getElementById('btnToggle').style.display = 'block'; // Activar botón para administrador
                 }
             }
 
@@ -981,8 +976,19 @@
             return resultado;
         }
 
-        async function prepararEnvio(form, metodo) {
+        async function prepararEnvio(event, form, metodo) {
+            event.preventDefault(); // Evitamos recarga de la pagina o envio por default
             mostrarCarga(form);
+            
+            const fileInput = form.querySelector('input[type="file"]');
+            const file = fileInput.files[0];
+
+            if (!file) {
+                alert("Por favor, sube la imagen del comprobante de pago.");
+                ocultarCarga(form);
+                return;
+            }
+
             const codigo = generarCodigoPedido();
             const hora = obtenerHoraColombia();
             const email = localStorage.getItem('googleEmailDarkMatter') || "No login";
@@ -995,7 +1001,6 @@
 
             if (metodo === 'nequi') {
                 document.getElementById('codigoPedidoNequi').value = codigo;
-                document.getElementById('subjectNequi').value = `NUEVO PAGO NEQUI ${codigo} - DARKMATTER`;
                 robloxUser = document.getElementById('userRobloxNequi').value;
                 telefono = document.getElementById('prefijoNequi').value + " " + document.getElementById('telNequi').value;
                 marca = document.getElementById('marcaNequi').value;
@@ -1003,7 +1008,6 @@
                 dias = document.getElementById('hiddenDiasNequi').value;
             } else {
                 document.getElementById('codigoPedidoPayPal').value = codigo;
-                document.getElementById('subjectPayPal').value = `NUEVO PAGO PAYPAL ${codigo} - DARKMATTER`;
                 robloxUser = document.getElementById('userRobloxPayPal').value;
                 telefono = document.getElementById('prefijoPayPal').value + " " + document.getElementById('telPayPal').value;
                 marca = document.getElementById('marcaPayPal').value;
@@ -1011,26 +1015,38 @@
                 dias = document.getElementById('hiddenDiasPayPal').value;
             }
 
-            const pedidoData = {
-                codigo: codigo,
-                correo: email,
-                usuarioRoblox: robloxUser,
-                telefono: telefono,
-                marca: marca,
-                monto: monto,
-                dias: dias,
-                hora: hora,
-                metodo: metodo.toUpperCase()
-            };
+            const reader = new FileReader();
+            reader.onloadend = async function() {
+                const base64String = reader.result;
 
-            try {
-                await fetch(`https://key-sistem-roblox-dm-default-rtdb.firebaseio.com/pedidos_admin/${codigo.replace('#', '')}.json`, {
-                    method: "PUT",
-                    body: JSON.stringify(pedidoData)
-                });
-            } catch (error) {
-                console.error("Error guardando pedido global:", error);
-            }
+                const pedidoData = {
+                    codigo: codigo,
+                    correo: email,
+                    usuarioRoblox: robloxUser,
+                    telefono: telefono,
+                    marca: marca,
+                    monto: monto,
+                    dias: dias,
+                    hora: hora,
+                    metodo: metodo.toUpperCase(),
+                    comprobante: base64String
+                };
+
+                try {
+                    await fetch(`https://key-sistem-roblox-dm-default-rtdb.firebaseio.com/pedidos_admin/${codigo.replace('#', '')}.json`, {
+                        method: "PUT",
+                        body: JSON.stringify(pedidoData)
+                    });
+                    alert("✅ Tu comprobante se envió correctamente. Estaremos revisando tu compra de 5 minutos a 4 horas. Recibirás tu key a tu correo.");
+                    form.reset();
+                    ocultarCarga(form);
+                } catch (error) {
+                    console.error("Error guardando pedido global:", error);
+                    alert("Ocurrió un error al enviar el comprobante. Por favor intenta de nuevo.");
+                    ocultarCarga(form);
+                }
+            };
+            reader.readAsDataURL(file);
         }
 
         async function cargarPedidosAdmin() {
@@ -1049,6 +1065,8 @@
                 const pedidosArray = Object.values(data).sort((a, b) => new Date(b.hora) - new Date(a.hora));
 
                 pedidosArray.forEach(p => {
+                    let comprobanteHTML = p.comprobante ? `<div style="margin-top: 10px; text-align: center;"><a href="${p.comprobante}" target="_blank"><img src="${p.comprobante}" alt="Comprobante de Pago" style="max-width: 100%; max-height: 250px; border-radius: 8px; border: 1px solid #475569;"></a></div>` : '<p style="color: var(--danger); font-size: 0.8em; text-align: center;">Sin comprobante adjunto</p>';
+
                     htmlTemp += `
                         <div class="pedido-admin-item">
                             <div class="pedido-admin-header">
@@ -1059,6 +1077,7 @@
                             <strong>📧 Correo:</strong> ${p.correo}<br>
                             <strong>📅 Días:</strong> ${p.dias} | <strong>💰 Pago:</strong> ${p.monto}<br>
                             <strong>📱 Tel:</strong> ${p.telefono} (${p.marca})<br>
+                            ${comprobanteHTML}
                             <div style="margin-top:5px; font-size:0.8em; color:var(--primary); text-align:right;">${p.hora}</div>
                         </div>
                     `;
@@ -1176,6 +1195,15 @@
             loading.style.display = "block";
         }
 
+        function ocultarCarga(form) {
+            const btn = form.querySelector('button');
+            const loading = form.querySelector('.loading-text');
+            btn.innerText = "Enviar Comprobante";
+            btn.disabled = false;
+            btn.style.opacity = "1";
+            loading.style.display = "none";
+        }
+
         function cambiarPestana(id) {
             document.querySelectorAll('.tab-content').forEach(tab => tab.classList.remove('active'));
             document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
@@ -1199,7 +1227,26 @@
         }
 
         function descargarDelta() { window.open("https://delta-executor.com/", '_blank'); }
-        function toggleTienda() {}
+        
+        let tiendaActiva = true;
+        function toggleTienda() {
+            tiendaActiva = !tiendaActiva;
+            const btn = document.getElementById('btnToggle');
+            const tienda = document.getElementById('tiendaContenedor');
+            const mant = document.getElementById('pantallaMantenimiento');
+            
+            if (tiendaActiva) {
+                btn.innerText = "Desactivar Tienda";
+                btn.style.backgroundColor = "var(--danger)";
+                tienda.style.display = "block";
+                mant.style.display = "none";
+            } else {
+                btn.innerText = "Activar Tienda";
+                btn.style.backgroundColor = "var(--success)";
+                tienda.style.display = "none";
+                mant.style.display = "block";
+            }
+        }
 
         function copiarScript(btn) {
             const texto = document.getElementById('scriptCopiar').innerText;
