@@ -1181,11 +1181,10 @@
             document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
             document.getElementById(id).classList.add('active');
             
-            if (window.event && window.event.currentTarget && window.event.currentTarget.classList) {
-                window.event.currentTarget.classList.add('active');
+            if (event && event.currentTarget) {
+                event.currentTarget.classList.add('active');
             } else {
-                const tabId = (id === 'nequi') ? 'tabNequi' : (id === 'paypal') ? 'tabPaypal' : (id === 'delta') ? 'tabDelta' : (id === 'adminPanel') ? 'tabAdmin' : null;
-                if (tabId) document.getElementById(tabId).classList.add('active');
+                if (id === 'adminPanel') document.getElementById('tabAdmin').classList.add('active');
             }
 
             // Limpiar intervalos antiguos para no duplicar
