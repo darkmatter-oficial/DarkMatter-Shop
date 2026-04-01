@@ -920,9 +920,12 @@
 
         function iniciarProcesoEmail() {
             pinGenerado = Math.floor(100000 + Math.random() * 900000).toString();
+            
+            const mensajePin = `🔑 CÓDIGO DE VERIFICACIÓN - DARKMATTER SHOP 🔑\n\nHola,\n\nSe ha solicitado acceso a tu cuenta en DarkMatter Shop.\nTu código de verificación de 6 dígitos es: ${pinGenerado}\n\nPor favor, ingresa este código en la página para continuar. Si no solicitaste este acceso, puedes ignorar este mensaje.\n\nAtentamente,\nEl equipo de DarkMatter Shop.`;
+            
             const templateParams = {
                 to_email: correoTemporal,
-                message: pinGenerado
+                message: mensajePin
             };
 
             emailjs.send('service_hu31i2y', 'template_j7pyhsf', templateParams)
@@ -1112,9 +1115,11 @@
                     });
 
                     // Notificación de nueva compra al administrador
+                    const mensajeAdmin = `📢 NUEVO PEDIDO RECIBIDO - DARKMATTER SHOP 📢\n\nSe ha registrado un nuevo comprobante de pago en el sistema.\n\n🔸 Código del pedido: ${codigo}\n🔸 Método de pago: ${metodo.toUpperCase()}\n🔸 Monto: ${monto}\n🔸 Usuario Roblox: ${robloxUser}\n🔸 Correo del cliente: ${email}\n🔸 Fecha y hora: ${hora}\n\nPor favor, ingresa al panel de administración para revisar el comprobante y gestionar (Aceptar/Rechazar) este pedido.`;
+                    
                     const templateParamsAdmin = {
                         to_email: 'oficialdarkmatter@gmail.com',
-                        message: codigo
+                        message: mensajeAdmin
                     };
                     await emailjs.send('service_hu31i2y', 'template_7xutlds', templateParamsAdmin);
 
@@ -1242,101 +1247,48 @@
                     })
                 });
 
-                const mensajePersonalizado = `🔥 GRACIAS POR COMPRAR DARKMATTER PANEL 🔥
+                const mensajePersonalizado = `==================================================
+🌟 BIENVENIDO A DARKMATTER PANEL 🌟
+==================================================
 
-Tu compra fue procesada correctamente y tu acceso ha sido activado.
+Estimado usuario,
+
+Nos complace informarte que tu compra ha sido validada exitosamente. Tu acceso premium a DarkMatter ha sido activado.
 
 --------------------------------------------------
-
-🔑 KEY DE ACCESO
+🔑 TU KEY DE ACCESO PRIVADA
 ${nuevaKey}
-
-🌐 PANEL DE CONTROL Y GESTIÓN
-Accede aquí para ver tus datos y afiliar personas:
-https://darkmatter-oficial.github.io/DarkMatter-Shop/
-
-📅 FECHA DE EXPIRACIÓN
-${fechaExp} hora militar colombia
-
-💰 COSTO DE ACCESO
-${pedidoActualParaGestion.monto}
-
 --------------------------------------------------
 
-👤 INFORMACIÓN DEL USUARIO
+🌐 PANEL DE GESTIÓN DE CUENTA
+Para gestionar tu key, ver su estado o agregar afiliados, ingresa a:
+👉 https://darkmatter-oficial.github.io/DarkMatter-Shop/
 
-🎮 Usuario Roblox
-${pedidoActualParaGestion.usuarioRoblox}
+📅 DETALLES DE TU SUSCRIPCIÓN
+• Fecha de Expiración: ${fechaExp} (Hora Colombia)
+• Costo de la Suscripción: ${pedidoActualParaGestion.monto}
 
-📱 Dispositivo registrado
-${pedidoActualParaGestion.marca}
-
-📞 Teléfono
-${pedidoActualParaGestion.telefono}
-
---------------------------------------------------
-
-📂 INFORMACIÓN DEL PANEL
-
-Nombre: DARKMATTER
-Compatibilidad: Mobile
-Tipo: Script Universal Shooters
+👤 PERFIL ASIGNADO
+• Usuario de Roblox: ${pedidoActualParaGestion.usuarioRoblox}
+• Dispositivo Vinculado: ${pedidoActualParaGestion.marca}
+• Teléfono de Contacto: ${pedidoActualParaGestion.telefono}
 
 --------------------------------------------------
-
-📜 SCRIPT DE EJECUCIÓN
+💻 SCRIPT DE EJECUCIÓN (Copia y pega en Delta Executor)
 
 loadstring(game:HttpGet("https://raw.githubusercontent.com/SergioYT01/DarkMatter_Key/refs/heads/main/DarkMatter_key.lua"))()
 
 --------------------------------------------------
+⚠️ TÉRMINOS Y REGLAS DE SEGURIDAD ⚠️
+1. Tu Key es ESTRICTAMENTE PERSONAL E INTRANSFERIBLE.
+2. El uso compartido de la Key resultará en la suspensión automática y permanente de la misma.
+3. Esta Key está vinculada de manera exclusiva al dispositivo registrado (${pedidoActualParaGestion.marca}).
 
-🎯 FUNCIONES PRINCIPALES
+Agradecemos tu confianza en DarkMatter. ¡Disfruta de la mejor experiencia!
 
-👀 SISTEMA ESP
-- ESP Box
-- ESP Línea
-- ESP Distancia
-- ESP Nombre
-- ESP Barra de vida
-- Highlight ESP
-
-🎯 SISTEMA AIMBOT
-- Aimbot Mobile (auto lock)
-- Modos:
-  - Disimulado
-  - Directo
-  - Suave
-- FOV configurable
-
-🏃 SISTEMA DE MOVIMIENTO
-- Fly Hack
-- Speed Hack
-- Jump Hack
-- Spin Hack
-- Wallhack
-
-🚀 TELEPORT SYSTEM
-- Guardar posición
-- Teletransportarse
-- Teleport trasero
-
-🌀 SISTEMA DE ÓRBITA
-- Orbitar jugadores
-- Ajustar velocidad
-- Ajustar distancia
-
---------------------------------------------------
-
-🔒 REGLAS DE USO
-
-- No compartas tu KEY con nadie.
-- Cada key es única.
-- Si la key se comparte puede ser desactivada.
-- Solo funciona en el dispositivo registrado.
-
---------------------------------------------------
-
-💜 Disfruta tu acceso a DARKMATTER.`;
+Atentamente,
+El Equipo de DarkMatter.
+==================================================`;
 
                 const templateParams = {
                     to_email: pedidoActualParaGestion.correo,
@@ -1345,9 +1297,11 @@ loadstring(game:HttpGet("https://raw.githubusercontent.com/SergioYT01/DarkMatter
                 await emailjs.send('service_hu31i2y', 'template_7xutlds', templateParams);
                 alert("Pedido ACEPTADO.");
             } else {
+                const mensajeRechazo = `⚠️ ACTUALIZACIÓN DE PEDIDO - DARKMATTER SHOP ⚠️\n\nEstimado usuario,\n\nLamentamos informarle que su pedido con el código #${pedidoActualParaGestion.codigo} ha sido RECHAZADO tras la revisión manual de nuestro equipo.\n\nEsto puede deberse a que el comprobante de pago no es válido, no coincide con el monto esperado, o la imagen no es legible. Si considera que esto es un error o desea intentar nuevamente, por favor envíe un comprobante claro a través de nuestra página web.\n\nAtentamente,\nEl equipo de DarkMatter Shop.`;
+                
                 const templateParams = {
                     to_email: pedidoActualParaGestion.correo,
-                    message: `Su pedido ${pedidoActualParaGestion.codigo} ha sido RECHAZADO.`
+                    message: mensajeRechazo
                 };
                 await emailjs.send('service_hu31i2y', 'template_7xutlds', templateParams);
                 alert("Pedido RECHAZADO.");
