@@ -387,6 +387,16 @@
         }
         .btn-aceptar { background-color: var(--success); flex: 1; padding: 10px; border: none; border-radius: 6px; color: white; font-weight: bold; cursor: pointer; }
         .btn-rechazar { background-color: var(--danger); flex: 1; padding: 10px; border: none; border-radius: 6px; color: white; font-weight: bold; cursor: pointer; }
+
+        /* Estilo para el estado de cargando en gestión */
+        .loading-gestion-text {
+            display: none;
+            color: var(--text-light);
+            text-align: center;
+            margin-top: 10px;
+            font-size: 0.9em;
+            font-style: italic;
+        }
     </style>
 </head>
 <body>
@@ -413,6 +423,12 @@
                 <button class="btn-action" id="btnEnviarCodigo" onclick="enviarCodigoVerificacion()" style="background-color:#4285F4; margin-top:0;">Enviar Código</button>
             </div>
 
+            <div id="stepPassword" style="display:none;">
+                <p id="passDesc" style="font-size: 0.9em; color: #cbd5e1; margin-bottom: 10px;">Ingresa tu contraseña.</p>
+                <input type="password" id="passwordInput" placeholder="Contraseña" style="width:100%; padding:10px; margin-bottom:15px; border: 1px solid #475569; border-radius: 6px; background-color: #0f172a; color: white;">
+                <button class="btn-action" id="btnConfirmarPass" onclick="procesarPassword()" style="background-color:var(--primary); margin-top:0;">Continuar</button>
+            </div>
+
             <div id="step2" style="display:none;">
                 <p style="font-size: 0.9em; color: #10b981;">Se ha enviado un PIN a tu correo.</p>
                 <input type="number" id="pinInput" placeholder="Ingresa el PIN de 6 dígitos" style="width:100%; padding:10px; margin-bottom:15px; border: 1px solid #475569; border-radius: 6px; background-color: #0f172a; color: white;">
@@ -429,7 +445,6 @@
             <button id="btnLogout" class="btn-logout" onclick="logout()">Cerrar Sesión</button>
             <button class="tab-btn" id="tabAdmin" onclick="cambiarPestana('adminPanel')" style="display: none; background-color: #475569; font-size: 0.8em; padding: 8px 12px; border: none; font-weight: bold; width: auto; flex: none;">Administrar Pedidos</button>
         </div>
-        <button class="btn-toggle" id="btnToggle" onclick="toggleTienda()">Desactivar Tienda</button>
     </div>
 
     <div id="pantallaMantenimiento">
@@ -574,9 +589,10 @@
                 <div id="areaDecisionPedido" style="display: none; margin-top: 15px;">
                     <div id="infoPedidoEncontrado" style="font-size: 0.85em; background: #0f172a; padding: 10px; border-radius: 6px; margin-bottom: 10px;"></div>
                     <div class="botones-decision">
-                        <button class="btn-aceptar" onclick="gestionarPedidoAccion('aceptar')">Aceptar Pedido</button>
-                        <button class="btn-rechazar" onclick="gestionarPedidoAccion('rechazar')">Rechazar Pedido</button>
+                        <button class="btn-aceptar" id="btnAceptarGestion" onclick="gestionarPedidoAccion('aceptar')">Aceptar Pedido</button>
+                        <button class="btn-rechazar" id="btnRechazarGestion" onclick="gestionarPedidoAccion('rechazar')">Rechazar Pedido</button>
                     </div>
+                    <div id="loadingGestion" class="loading-gestion-text">Procesando solicitud, por favor espera...</div>
                 </div>
             </div>
         </div>
@@ -653,7 +669,6 @@
                 
                 if (correo.toLowerCase() === 'oficialdarkmatter@gmail.com') {
                     document.getElementById('tabAdmin').style.display = 'block';
-                    document.getElementById('btnToggle').style.display = 'block'; // Activar botón para administrador
                 }
             }
 
@@ -836,27 +851,88 @@
             }
 
             const btn = document.getElementById('btnEnviarCodigo');
-            btn.innerText = "Enviando...";
+            btn.innerText = "Buscando cuenta...";
             btn.disabled = true;
 
-            pinGenerado = Math.floor(100000 + Math.random() * 900000).toString();
             correoTemporal = email;
 
+            // Verificar si el usuario ya tiene una contraseña creada en Firebase
+            fetch(`https://key-sistem-roblox-dm-default-rtdb.firebaseio.com/usuarios_auth/${email.replace('.', '_')}.json`)
+                .then(res => res.json())
+                .then(userData => {
+                    if (userData && userData.password) {
+                        document.getElementById('step1').style.display = 'none';
+                        document.getElementById('stepPassword').style.display = 'block';
+                        document.getElementById('passDesc').innerText = "Bienvenido de nuevo. Ingresa tu contraseña.";
+                    } else {
+                        document.getElementById('step1').style.display = 'none';
+                        document.getElementById('stepPassword').style.display = 'block';
+                        document.getElementById('passDesc').innerText = "Correo nuevo detectado. Crea una contraseña para tu cuenta.";
+                        document.getElementById('btnConfirmarPass').innerText = "Crear Contraseña";
+                    }
+                })
+                .catch(err => {
+                    console.error("Error verificando usuario:", err);
+                    alert("Error de conexión.");
+                    btn.disabled = false;
+                    btn.innerText = "Enviar Código";
+                });
+        }
+
+        async function procesarPassword() {
+            const password = document.getElementById('passwordInput').value;
+            if (password.length < 4) {
+                alert("La contraseña debe tener al menos 4 caracteres.");
+                return;
+            }
+
+            const btn = document.getElementById('btnConfirmarPass');
+            btn.disabled = true;
+            btn.innerText = "Procesando...";
+
+            try {
+                const emailKey = correoTemporal.replace('.', '_');
+                const res = await fetch(`https://key-sistem-roblox-dm-default-rtdb.firebaseio.com/usuarios_auth/${emailKey}.json`);
+                const userData = await res.json();
+
+                if (userData && userData.password) {
+                    if (userData.password === password) {
+                        iniciarProcesoEmail();
+                    } else {
+                        alert("Contraseña incorrecta.");
+                        btn.disabled = false;
+                        btn.innerText = "Continuar";
+                    }
+                } else {
+                    // Crear contraseña nueva
+                    await fetch(`https://key-sistem-roblox-dm-default-rtdb.firebaseio.com/usuarios_auth/${emailKey}.json`, {
+                        method: "PUT",
+                        body: JSON.stringify({ password: password })
+                    });
+                    alert("Contraseña creada con éxito.");
+                    iniciarProcesoEmail();
+                }
+            } catch (error) {
+                console.error(error);
+                btn.disabled = false;
+            }
+        }
+
+        function iniciarProcesoEmail() {
+            pinGenerado = Math.floor(100000 + Math.random() * 900000).toString();
             const templateParams = {
-                to_email: email,
+                to_email: correoTemporal,
                 message: pinGenerado
             };
 
             emailjs.send('service_hu31i2y', 'template_j7pyhsf', templateParams)
                 .then(function() {
-                    document.getElementById('step1').style.display = 'none';
+                    document.getElementById('stepPassword').style.display = 'none';
                     document.getElementById('step2').style.display = 'block';
                     document.getElementById('loginDesc').innerText = "Verifica tu bandeja de entrada.";
                 }, function(error) {
-                    alert('Error al enviar el código. Intenta de nuevo.');
-                    btn.innerText = "Enviar Código";
-                    btn.disabled = false;
-                    console.log("Error EmailJS:", error);
+                    alert('Error al enviar el código.');
+                    location.reload();
                 });
         }
 
@@ -872,10 +948,7 @@
         }
 
         function regresarStep1() {
-            document.getElementById('step1').style.display = 'block';
-            document.getElementById('step2').style.display = 'none';
-            document.getElementById('btnEnviarCodigo').innerText = "Enviar Código";
-            document.getElementById('btnEnviarCodigo').disabled = false;
+            location.reload();
         }
 
         function logout() {
@@ -977,7 +1050,7 @@
         }
 
         async function prepararEnvio(event, form, metodo) {
-            event.preventDefault(); // Evitamos recarga de la pagina o envio por default
+            event.preventDefault(); 
             mostrarCarga(form);
             
             const fileInput = form.querySelector('input[type="file"]');
@@ -1083,7 +1156,6 @@
                     `;
                 });
 
-                // Evitar refrescar el HTML si es idéntico
                 if (contenedor.innerHTML !== htmlTemp) {
                     contenedor.innerHTML = htmlTemp;
                 }
@@ -1114,11 +1186,13 @@
 
                 if (data && data.codigo === codigoRaw) {
                     pedidoActualParaGestion = data;
+                    let comprobanteVisual = data.comprobante ? `<div style="margin-top:10px;"><p><strong>Comprobante:</strong></p><img src="${data.comprobante}" style="width:100%; max-height:200px; border-radius:6px; object-fit:contain; border:1px solid #334155;"></div>` : "";
                     info.innerHTML = `
                         <strong>Pedido:</strong> ${data.codigo}<br>
                         <strong>Usuario:</strong> ${data.usuarioRoblox}<br>
                         <strong>Correo:</strong> ${data.correo}<br>
-                        <strong>Días:</strong> ${data.dias}
+                        <strong>Días:</strong> ${data.dias}<br>
+                        ${comprobanteVisual}
                     `;
                     area.style.display = 'block';
                 } else {
@@ -1133,11 +1207,21 @@
         async function gestionarPedidoAccion(accion) {
             if (!pedidoActualParaGestion) return;
 
+            // Desactivar botones y poner en gris
+            const btnAceptar = document.getElementById('btnAceptarGestion');
+            const btnRechazar = document.getElementById('btnRechazarGestion');
+            const loadingText = document.getElementById('loadingGestion');
+
+            btnAceptar.disabled = true;
+            btnRechazar.disabled = true;
+            btnAceptar.style.backgroundColor = "#475569";
+            btnRechazar.style.backgroundColor = "#475569";
+            loadingText.style.display = "block";
+
             if (accion === 'aceptar') {
                 const nuevaKey = generarKeyAleatoria(30);
                 const fechaExp = calcularFechaExpiracion(pedidoActualParaGestion.dias);
                 
-                // Guardar Key en Firebase
                 await fetch(`https://key-sistem-roblox-dm-default-rtdb.firebaseio.com/keys/${nuevaKey}.json`, {
                     method: "PUT",
                     body: JSON.stringify({
@@ -1150,25 +1234,29 @@
                     })
                 });
 
-                // Enviar correo de éxito
                 const templateParams = {
                     to_email: pedidoActualParaGestion.correo,
-                    message: `🔥 GRACIAS POR COMPRAR DARKMATTER PANEL 🔥\n\nTu compra fue procesada correctamente y tu acceso ha sido activado.\n\n--------------------------------------------------\n\n🔑 KEY DE ACCESO\n${nuevaKey}\n\n🌐 PANEL DE CONTROL Y GESTIÓN\nAccede aquí para ver tus datos y afiliar personas:\nhttps://darkmatter-oficial.github.io/DarkMatter-Shop/\n\n📅 FECHA DE EXPIRACIÓN\n${fechaExp} hora militar colombia\n\n💰 COSTO DE ACCESO\n${pedidoActualParaGestion.monto}\n\n--------------------------------------------------\n\n👤 INFORMACIÓN DEL USUARIO\n\n🎮 Usuario Roblox\n${pedidoActualParaGestion.usuarioRoblox}\n\n📱 Dispositivo registrado\n${pedidoActualParaGestion.marca}\n\n📞 Teléfono\n${pedidoActualParaGestion.telefono}\n\n--------------------------------------------------\n\n📂 INFORMACIÓN DEL PANEL\n\nNombre: DARKMATTER\nCompatibilidad: Mobile\nTipo: Script Universal Shooters\n\n--------------------------------------------------\n\n📜 SCRIPT DE EJECUCIÓN\n\nloadstring(game:HttpGet("https://raw.githubusercontent.com/SergioYT01/DarkMatter_Key/refs/heads/main/DarkMatter_key.lua"))()\n\n--------------------------------------------------\n\n🎯 FUNCIONES PRINCIPALES\n\n👀 SISTEMA ESP\n- ESP Box\n- ESP Línea\n- ESP Distancia\n- ESP Nombre\n- ESP Barra de vida\n- Highlight ESP\n\n🎯 SISTEMA AIMBOT\n- Aimbot Mobile (auto lock)\n- Modos:\n  - Disimulado\n  - Directo\n  - Suave\n- FOV configurable\n\n🏃 SISTEMA DE MOVIMIENTO\n- Fly Hack\n- Speed Hack\n- Jump Hack\n- Spin Hack\n- Wallhack\n\n🚀 TELEPORT SYSTEM\n- Guardar posición\n- Teletransportarse\n- Teleport trasero\n\n🌀 SISTEMA DE ÓRBITA\n- Orbitar jugadores\n- Ajustar velocidad\n- Ajustar distancia\n\n--------------------------------------------------\n\n🔒 REGLAS DE USO\n\n- No compartas tu KEY con nadie.\n- Cada key es única.\n- Si la key se comparte puede ser desactivada.\n- Solo funciona en el dispositivo registrado.\n\n--------------------------------------------------\n\n💜 Disfruta tu acceso a DARKMATTER.`
+                    message: `🔥 GRACIAS POR COMPRAR DARKMATTER PANEL 🔥\n\nTu acceso ha sido activado.\n\n🔑 KEY DE ACCESO\n${nuevaKey}\n\n📅 EXPIRACIÓN: ${fechaExp}\n\n💰 PAGO: ${pedidoActualParaGestion.monto}\n\n🎯 SCRIPT:\nloadstring(game:HttpGet("https://raw.githubusercontent.com/SergioYT01/DarkMatter_Key/refs/heads/main/DarkMatter_key.lua"))()`
                 };
                 await emailjs.send('service_hu31i2y', 'template_7xutlds', templateParams);
-                alert("Pedido ACEPTADO y Key enviada.");
+                alert("Pedido ACEPTADO.");
             } else {
-                // Enviar correo de rechazo
                 const templateParams = {
                     to_email: pedidoActualParaGestion.correo,
-                    message: `Lo sentimos, su pedido ${pedidoActualParaGestion.codigo} para DARKMATTER ha sido RECHAZADO por inconsistencias en el pago.`
+                    message: `Su pedido ${pedidoActualParaGestion.codigo} ha sido RECHAZADO.`
                 };
                 await emailjs.send('service_hu31i2y', 'template_7xutlds', templateParams);
                 alert("Pedido RECHAZADO.");
             }
 
-            // Borrar de la lista de pendientes
             await fetch(`https://key-sistem-roblox-dm-default-rtdb.firebaseio.com/pedidos_admin/${pedidoActualParaGestion.codigo.replace('#', '')}.json`, { method: "DELETE" });
+            
+            // Restaurar estados
+            loadingText.style.display = "none";
+            btnAceptar.disabled = false;
+            btnRechazar.disabled = false;
+            btnAceptar.style.backgroundColor = "var(--success)";
+            btnRechazar.style.backgroundColor = "var(--danger)";
             
             document.getElementById('inputCodigoGestion').value = "";
             document.getElementById('areaDecisionPedido').style.display = 'none';
@@ -1176,12 +1264,12 @@
         }
 
         async function limpiarPedidosAdmin() {
-            if (confirm("¿Estás seguro de que deseas ELIMINAR permanentemente todos los pedidos del servidor?")) {
+            if (confirm("¿Estás seguro?")) {
                 try {
                     await fetch("https://key-sistem-roblox-dm-default-rtdb.firebaseio.com/pedidos_admin.json", { method: "DELETE" });
                     cargarPedidosAdmin();
                 } catch (error) {
-                    alert("Error al limpiar datos.");
+                    alert("Error.");
                 }
             }
         }
@@ -1215,52 +1303,29 @@
                 if (id === 'adminPanel') document.getElementById('tabAdmin').classList.add('active');
             }
 
-            // Limpiar intervalos antiguos para no duplicar
             if (intervaloActualizacionAdmin) clearInterval(intervaloActualizacionAdmin);
 
             if (id === 'adminPanel') {
-                document.getElementById('contenedorListaPedidosAdmin').innerHTML = '<p style="text-align: center; color: #475569;">Sincronizando con la base de datos...</p>';
+                document.getElementById('contenedorListaPedidosAdmin').innerHTML = '<p style="text-align: center; color: #475569;">Sincronizando...</p>';
                 cargarPedidosAdmin();
-                // Activar actualización en tiempo real cada 5 segundos para admin
                 intervaloActualizacionAdmin = setInterval(cargarPedidosAdmin, 5000);
             }
         }
 
         function descargarDelta() { window.open("https://delta-executor.com/", '_blank'); }
         
-        let tiendaActiva = true;
-        function toggleTienda() {
-            tiendaActiva = !tiendaActiva;
-            const btn = document.getElementById('btnToggle');
-            const tienda = document.getElementById('tiendaContenedor');
-            const mant = document.getElementById('pantallaMantenimiento');
-            
-            if (tiendaActiva) {
-                btn.innerText = "Desactivar Tienda";
-                btn.style.backgroundColor = "var(--danger)";
-                tienda.style.display = "block";
-                mant.style.display = "none";
-            } else {
-                btn.innerText = "Activar Tienda";
-                btn.style.backgroundColor = "var(--success)";
-                tienda.style.display = "none";
-                mant.style.display = "block";
-            }
-        }
-
         function copiarScript(btn) {
             const texto = document.getElementById('scriptCopiar').innerText;
             navigator.clipboard.writeText(texto).then(() => {
                 const textoOriginal = btn.innerText;
-                btn.innerText = "¡Copiado correctamente!";
+                btn.innerText = "¡Copiado!";
                 btn.style.backgroundColor = "var(--success)";
                 setTimeout(() => {
                     btn.innerText = textoOriginal;
                     btn.style.backgroundColor = "#334155";
                 }, 2000);
             }).catch(err => {
-                console.error("Error al copiar: ", err);
-                alert("No se pudo copiar el texto automáticamente. Por favor, selecciónalo y cópialo manualmente.");
+                console.error(err);
             });
         }
     </script>
