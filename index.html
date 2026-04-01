@@ -982,7 +982,10 @@
         }
 
         async function prepararEnvio(form, metodo) {
-            mostrarCarga(form);
+            // Modificación: No bloqueamos el botón inmediatamente para permitir que el evento de envío fluya
+            const btn = form.querySelector('button');
+            const loading = form.querySelector('.loading-text');
+            
             const codigo = generarCodigoPedido();
             const hora = obtenerHoraColombia();
             const email = localStorage.getItem('googleEmailDarkMatter') || "No login";
@@ -1024,12 +1027,21 @@
             };
 
             try {
+                // Guardamos en Firebase antes de que FormSubmit se lleve la página
                 await fetch(`https://key-sistem-roblox-dm-default-rtdb.firebaseio.com/pedidos_admin/${codigo.replace('#', '')}.json`, {
                     method: "PUT",
                     body: JSON.stringify(pedidoData)
                 });
+                
+                // Ahora sí mostramos el estado de carga justo antes de que se procese el envío del formulario
+                btn.innerText = "Enviando...";
+                btn.disabled = true;
+                btn.style.opacity = "0.7";
+                loading.style.display = "block";
+
             } catch (error) {
                 console.error("Error guardando pedido global:", error);
+                // Si falla Firebase, igual permitimos que el formulario intente enviarse
             }
         }
 
@@ -1168,6 +1180,7 @@
         }
 
         function mostrarCarga(form) {
+            // Nota: Esta función ya no se llama al inicio de prepararEnvio para evitar el error de cancelación de compra.
             const btn = form.querySelector('button');
             const loading = form.querySelector('.loading-text');
             btn.innerText = "Enviando...";
