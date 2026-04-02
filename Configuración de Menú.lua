@@ -1066,30 +1066,4 @@ if CategoryFrames["COMBAT"] then
     CategoryFrames["COMBAT"].BackgroundColor3 = THEME.Accent
     CategoryFrames["COMBAT"].TextColor3 = THEME.TopBar
 end
-
-task.spawn(function()
-    local LP = game:GetService("Players").LocalPlayer
-    if MainFrame:FindFirstChild("TitleBar") then
-        local tb = MainFrame.TitleBar
-        local av = tb:FindFirstChild("UserAvatar") or Instance.new("ImageLabel", tb)
-        av.Name = "UserAvatar"
-        av.Size = UDim2.new(0, 35, 0, 35)
-        av.Position = UDim2.new(0, 10, 0.5, -17)
-        av.BackgroundColor3 = THEME.ElementBG
-        av.Image = "rbxthumb://type=AvatarHeadShot&id=" .. LP.UserId .. "&w=150&h=150"
-        if not av:FindFirstChildOfClass("UICorner") then Instance.new("UICorner", av).CornerRadius = UDim.new(1, 0) end
-        
-        local un = tb:FindFirstChild("UserName") or Instance.new("TextLabel", tb)
-        un.Name = "UserName"
-        un.Size = UDim2.new(0, 150, 1, 0)
-        un.Position = UDim2.new(0, 55, 0, 0)
-        un.BackgroundTransparency = 1
-        un.Text = LP.Name:upper()
-        un.TextColor3 = THEME.Text
-        un.Font = Enum.Font.GothamBold
-        un.TextSize = 14
-        un.TextXAlignment = Enum.TextXAlignment.Left
-    end
-end)
-
 _G.UpdateCategoryVisibility()
