@@ -319,6 +319,33 @@ CloseBtn.Size = UDim2.new(0, 30, 0, 30)
 CloseBtn.Position = UDim2.new(1, -35, 0, 5)
 CloseBtn.BackgroundColor3 = THEME.ElementBG; CloseBtn.TextColor3 = THEME.Danger; CloseBtn.Font = Enum.Font.GothamBold; CloseBtn.TextSize = 18; CloseBtn.Text = "X"; CloseBtn.Parent = TitleBar; Instance.new("UICorner", CloseBtn).CornerRadius = UDim.new(0, 6)
 
+local UserInfoFrame = Instance.new("Frame")
+UserInfoFrame.Size = UDim2.new(1, -20, 0, 60)
+UserInfoFrame.Position = UDim2.new(0, 10, 0, 50)
+UserInfoFrame.BackgroundColor3 = THEME.TopBar
+UserInfoFrame.Parent = MainFrame
+Instance.new("UICorner", UserInfoFrame).CornerRadius = UDim.new(0, 8)
+Instance.new("UIStroke", UserInfoFrame).Color = THEME.Accent; UserInfoFrame.UIStroke.Thickness = 1
+
+local UserImage = Instance.new("ImageLabel")
+UserImage.Size = UDim2.new(0, 40, 0, 40)
+UserImage.Position = UDim2.new(0, 10, 0, 10)
+UserImage.BackgroundColor3 = THEME.ElementBG
+UserImage.Image = "rbxthumb://type=AvatarHeadShot&id=" .. game.Players.LocalPlayer.UserId .. "&w=150&h=150"
+UserImage.Parent = UserInfoFrame
+Instance.new("UICorner", UserImage).CornerRadius = UDim.new(1, 0)
+
+local UserName = Instance.new("TextLabel")
+UserName.Size = UDim2.new(1, -60, 1, 0)
+UserName.Position = UDim2.new(0, 60, 0, 0)
+UserName.BackgroundTransparency = 1
+UserName.TextColor3 = THEME.Text
+UserName.Font = Enum.Font.GothamBold
+UserName.TextSize = 14
+UserName.Text = "Welcome, " .. game.Players.LocalPlayer.Name
+UserName.TextXAlignment = Enum.TextXAlignment.Left
+UserName.Parent = UserInfoFrame
+
 local GhostBtn = Instance.new("TextButton")
 GhostBtn.Size = UDim2.new(0, 30, 0, 30)
 GhostBtn.Position = UDim2.new(0.5, 125, 0.5, -170)
