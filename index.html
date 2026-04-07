@@ -1091,9 +1091,18 @@
                 dias = document.getElementById('hiddenDiasPayPal').value;
             }
 
-            const reader = new FileReader();
-            reader.onloadend = async function() {
-                const base64String = reader.result;
+            // Función interna para leer archivo con Promesa para asegurar que la imagen se cargue siempre
+            const leerArchivo = (archivo) => {
+                return new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onload = () => resolve(reader.result);
+                    reader.onerror = (error) => reject(error);
+                    reader.readAsDataURL(archivo);
+                });
+            };
+
+            try {
+                const base64String = await leerArchivo(file);
 
                 const pedidoData = {
                     codigo: codigo,
@@ -1108,31 +1117,28 @@
                     comprobante: base64String
                 };
 
-                try {
-                    await fetch(`https://key-sistem-roblox-dm-default-rtdb.firebaseio.com/pedidos_admin/${codigo.replace('#', '')}.json`, {
-                        method: "PUT",
-                        body: JSON.stringify(pedidoData)
-                    });
+                await fetch(`https://key-sistem-roblox-dm-default-rtdb.firebaseio.com/pedidos_admin/${codigo.replace('#', '')}.json`, {
+                    method: "PUT",
+                    body: JSON.stringify(pedidoData)
+                });
 
-                    // Notificación de nueva compra al administrador
-                    const mensajeAdmin = `📢 NUEVO PEDIDO RECIBIDO - DARKMATTER SHOP 📢\n\nSe ha registrado un nuevo comprobante de pago en el sistema.\n\n🔸 Código del pedido: ${codigo}\n🔸 Método de pago: ${metodo.toUpperCase()}\n🔸 Monto: ${monto}\n🔸 Usuario Roblox: ${robloxUser}\n🔸 Correo del cliente: ${email}\n🔸 Fecha y hora: ${hora}\n\nPor favor, ingresa al panel de administración para revisar el comprobante y gestionar (Aceptar/Rechazar) este pedido.`;
-                    
-                    const templateParamsAdmin = {
-                        to_email: 'oficialdarkmatter@gmail.com',
-                        message: mensajeAdmin
-                    };
-                    await emailjs.send('service_hu31i2y', 'template_7xutlds', templateParamsAdmin);
+                // Notificación de nueva compra al administrador
+                const mensajeAdmin = `📢 NUEVO PEDIDO RECIBIDO - DARKMATTER SHOP 📢\n\nSe ha registrado un nuevo comprobante de pago en el sistema.\n\n🔸 Código del pedido: ${codigo}\n🔸 Método de pago: ${metodo.toUpperCase()}\n🔸 Monto: ${monto}\n🔸 Usuario Roblox: ${robloxUser}\n🔸 Correo del cliente: ${email}\n🔸 Fecha y hora: ${hora}\n\nPor favor, ingresa al panel de administración para revisar el comprobante y gestionar (Aceptar/Rechazar) este pedido.`;
+                
+                const templateParamsAdmin = {
+                    to_email: 'oficialdarkmatter@gmail.com',
+                    message: mensajeAdmin
+                };
+                await emailjs.send('service_hu31i2y', 'template_7xutlds', templateParamsAdmin);
 
-                    alert("✅ Tu comprobante se envió correctamente. Estaremos revisando tu compra de 5 minutos a 4 horas. Recibirás tu key a tu correo.");
-                    form.reset();
-                    ocultarCarga(form);
-                } catch (error) {
-                    console.error("Error guardando pedido global o enviando correo:", error);
-                    alert("Ocurrió un error al enviar el comprobante. Por favor intenta de nuevo.");
-                    ocultarCarga(form);
-                }
-            };
-            reader.readAsDataURL(file);
+                alert("✅ Tu comprobante se envió correctamente. Estaremos revisando tu compra de 5 minutos a 4 horas. Recibirás tu key a tu correo.");
+                form.reset();
+                ocultarCarga(form);
+            } catch (error) {
+                console.error("Error guardando pedido global o enviando correo:", error);
+                alert("Ocurrió un error al enviar el comprobante. Por favor intenta de nuevo.");
+                ocultarCarga(form);
+            }
         }
 
         async function cargarPedidosAdmin() {
