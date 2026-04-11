@@ -493,7 +493,44 @@
                 </div>
 
                 <label>Marca de tu teléfono:</label>
-                <input type="text" name="Marca_Telefono" id="marcaNequi" placeholder="Samsung, iPhone, Motorola, etc" required>
+                <select name="Marca_Telefono" id="marcaNequi" required>
+                    <option value="" disabled selected>Selecciona tu marca</option>
+                    <option value="Samsung">Samsung</option>
+                    <option value="Apple">Apple</option>
+                    <option value="Huawei">Huawei</option>
+                    <option value="Xiaomi">Xiaomi</option>
+                    <option value="Redmi">Redmi</option>
+                    <option value="POCO">POCO</option>
+                    <option value="Realme">Realme</option>
+                    <option value="Oppo">Oppo</option>
+                    <option value="Vivo">Vivo</option>
+                    <option value="OnePlus">OnePlus</option>
+                    <option value="Google">Google</option>
+                    <option value="Motorola">Motorola</option>
+                    <option value="Nokia">Nokia</option>
+                    <option value="Sony">Sony</option>
+                    <option value="LG">LG</option>
+                    <option value="HTC">HTC</option>
+                    <option value="Asus">Asus</option>
+                    <option value="ZTE">ZTE</option>
+                    <option value="Lenovo">Lenovo</option>
+                    <option value="Honor">Honor</option>
+                    <option value="Alcatel">Alcatel</option>
+                    <option value="BlackBerry">BlackBerry</option>
+                    <option value="Tecno">Tecno</option>
+                    <option value="Infinix">Infinix</option>
+                    <option value="Itel">Itel</option>
+                    <option value="TCL">TCL</option>
+                    <option value="Blu">Blu</option>
+                    <option value="Nothing">Nothing</option>
+                    <option value="Fairphone">Fairphone</option>
+                    <option value="Razer">Razer</option>
+                    <option value="Cat">Cat</option>
+                    <option value="Sharp">Sharp</option>
+                    <option value="Panasonic">Panasonic</option>
+                    <option value="Philips">Philips</option>
+                    <option value="Otro">Otro</option>
+                </select>
 
                 <label>Comprobante de pago (Imagen):</label>
                 <input type="file" name="file" accept="image/*" required>
@@ -539,7 +576,44 @@
                 </div>
 
                 <label>Marca de tu teléfono:</label>
-                <input type="text" name="Marca_Telefono" id="marcaPayPal" placeholder="Samsung, iPhone, Motorola, etc" required>
+                <select name="Marca_Telefono" id="marcaPayPal" required>
+                    <option value="" disabled selected>Selecciona tu marca</option>
+                    <option value="Samsung">Samsung</option>
+                    <option value="Apple">Apple</option>
+                    <option value="Huawei">Huawei</option>
+                    <option value="Xiaomi">Xiaomi</option>
+                    <option value="Redmi">Redmi</option>
+                    <option value="POCO">POCO</option>
+                    <option value="Realme">Realme</option>
+                    <option value="Oppo">Oppo</option>
+                    <option value="Vivo">Vivo</option>
+                    <option value="OnePlus">OnePlus</option>
+                    <option value="Google">Google</option>
+                    <option value="Motorola">Motorola</option>
+                    <option value="Nokia">Nokia</option>
+                    <option value="Sony">Sony</option>
+                    <option value="LG">LG</option>
+                    <option value="HTC">HTC</option>
+                    <option value="Asus">Asus</option>
+                    <option value="ZTE">ZTE</option>
+                    <option value="Lenovo">Lenovo</option>
+                    <option value="Honor">Honor</option>
+                    <option value="Alcatel">Alcatel</option>
+                    <option value="BlackBerry">BlackBerry</option>
+                    <option value="Tecno">Tecno</option>
+                    <option value="Infinix">Infinix</option>
+                    <option value="Itel">Itel</option>
+                    <option value="TCL">TCL</option>
+                    <option value="Blu">Blu</option>
+                    <option value="Nothing">Nothing</option>
+                    <option value="Fairphone">Fairphone</option>
+                    <option value="Razer">Razer</option>
+                    <option value="Cat">Cat</option>
+                    <option value="Sharp">Sharp</option>
+                    <option value="Panasonic">Panasonic</option>
+                    <option value="Philips">Philips</option>
+                    <option value="Otro">Otro</option>
+                </select>
 
                 <label>Sube captura del recibo de PayPal:</label>
                 <input type="file" name="file" accept="image/*" required>
@@ -732,9 +806,21 @@
                 });
 
                 div.innerHTML = `
-                    <p><strong>Key #${index + 1}:</strong> <span class="key-text">${item.id}</span></p>
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                        <p style="margin: 0; width: 100%;"><strong>Key #${index + 1}:</strong> <span class="key-text" style="display: inline-block;">${item.id}</span></p>
+                        <button onclick="copiarKeyIndividual('${item.id}', this)" style="background: var(--primary); color: white; border: none; padding: 6px 10px; border-radius: 6px; cursor: pointer; font-size: 0.8em; font-weight: bold; margin-left: 10px; margin-top: 5px; white-space: nowrap;">Copiar</button>
+                    </div>
                     <div style="font-size: 0.9em; margin-top: 10px;">
-                        <p class="key-info-text">👤 <strong>Usuario Roblox:</strong> <input type="text" class="editable-roblox" value="${item.nombreRoblox || ""}" onblur="actualizarNombreRoblox('${item.id}', this.value)" placeholder="Ingresa usuario"></p>
+                        <div class="key-info-text" style="margin-bottom: 8px;">
+                            👤 <strong>Usuario Roblox:</strong> 
+                            <div style="display: flex; align-items: center; margin-top: 5px; flex-wrap: wrap; gap: 5px;">
+                                <input type="text" id="input-roblox-${item.id}" class="editable-roblox" style="margin-left: 0;" value="${item.nombreRoblox || ""}" oninput="mostrarBotonesEdicion('${item.id}')" placeholder="Ingresa usuario">
+                                <div id="edit-buttons-${item.id}" style="display: none; gap: 5px;">
+                                    <button onclick="confirmarNombreRoblox('${item.id}')" style="background: var(--success); color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 0.8em; font-weight: bold;">Confirmar</button>
+                                    <button onclick="cancelarNombreRoblox('${item.id}', '${item.nombreRoblox || ""}')" style="background: var(--danger); color: white; border: none; padding: 4px 8px; border-radius: 4px; cursor: pointer; font-size: 0.8em; font-weight: bold;">Rechazar</button>
+                                </div>
+                            </div>
+                        </div>
                         <p class="key-info-text">💰 <strong>Costo:</strong> ${item.costo || "N/A"}</p>
                         <p class="key-info-text">📅 <strong>Expira en:</strong> <span class="contador-regresivo" id="timer-${item.id}">Cargando...</span></p>
                         <p class="key-info-text">📱 <strong>Dispositivo:</strong> ${item.dispositivo || "N/A"}</p>
@@ -799,6 +885,42 @@
             } catch (error) {
                 console.error("Error al actualizar nombre de Roblox:", error);
             }
+        }
+
+        function mostrarBotonesEdicion(id) {
+            document.getElementById('edit-buttons-' + id).style.display = 'flex';
+        }
+
+        function cancelarNombreRoblox(id, valorOriginal) {
+            document.getElementById('input-roblox-' + id).value = valorOriginal;
+            document.getElementById('edit-buttons-' + id).style.display = 'none';
+        }
+
+        async function confirmarNombreRoblox(id) {
+            const nuevoNombre = document.getElementById('input-roblox-' + id).value;
+            const btnContainer = document.getElementById('edit-buttons-' + id);
+            
+            const btns = btnContainer.querySelectorAll('button');
+            btns.forEach(b => b.disabled = true);
+            
+            await actualizarNombreRoblox(id, nuevoNombre);
+            
+            btnContainer.style.display = 'none';
+            btns.forEach(b => b.disabled = false);
+        }
+
+        function copiarKeyIndividual(texto, btn) {
+            navigator.clipboard.writeText(texto).then(() => {
+                const textoOriginal = btn.innerText;
+                btn.innerText = "¡Copiado!";
+                btn.style.backgroundColor = "var(--success)";
+                setTimeout(() => {
+                    btn.innerText = textoOriginal;
+                    btn.style.backgroundColor = "var(--primary)";
+                }, 2000);
+            }).catch(err => {
+                console.error("Error al copiar: ", err);
+            });
         }
 
         async function gestionarAfiliadoPersonalizado(accion, keyId, nombre = "") {
@@ -1091,18 +1213,9 @@
                 dias = document.getElementById('hiddenDiasPayPal').value;
             }
 
-            // Función interna para leer archivo con Promesa para asegurar que la imagen se cargue siempre
-            const leerArchivo = (archivo) => {
-                return new Promise((resolve, reject) => {
-                    const reader = new FileReader();
-                    reader.onload = () => resolve(reader.result);
-                    reader.onerror = (error) => reject(error);
-                    reader.readAsDataURL(archivo);
-                });
-            };
-
-            try {
-                const base64String = await leerArchivo(file);
+            const reader = new FileReader();
+            reader.onloadend = async function() {
+                const base64String = reader.result;
 
                 const pedidoData = {
                     codigo: codigo,
@@ -1117,28 +1230,31 @@
                     comprobante: base64String
                 };
 
-                await fetch(`https://key-sistem-roblox-dm-default-rtdb.firebaseio.com/pedidos_admin/${codigo.replace('#', '')}.json`, {
-                    method: "PUT",
-                    body: JSON.stringify(pedidoData)
-                });
+                try {
+                    await fetch(`https://key-sistem-roblox-dm-default-rtdb.firebaseio.com/pedidos_admin/${codigo.replace('#', '')}.json`, {
+                        method: "PUT",
+                        body: JSON.stringify(pedidoData)
+                    });
 
-                // Notificación de nueva compra al administrador
-                const mensajeAdmin = `📢 NUEVO PEDIDO RECIBIDO - DARKMATTER SHOP 📢\n\nSe ha registrado un nuevo comprobante de pago en el sistema.\n\n🔸 Código del pedido: ${codigo}\n🔸 Método de pago: ${metodo.toUpperCase()}\n🔸 Monto: ${monto}\n🔸 Usuario Roblox: ${robloxUser}\n🔸 Correo del cliente: ${email}\n🔸 Fecha y hora: ${hora}\n\nPor favor, ingresa al panel de administración para revisar el comprobante y gestionar (Aceptar/Rechazar) este pedido.`;
-                
-                const templateParamsAdmin = {
-                    to_email: 'oficialdarkmatter@gmail.com',
-                    message: mensajeAdmin
-                };
-                await emailjs.send('service_hu31i2y', 'template_7xutlds', templateParamsAdmin);
+                    // Notificación de nueva compra al administrador
+                    const mensajeAdmin = `📢 NUEVO PEDIDO RECIBIDO - DARKMATTER SHOP 📢\n\nSe ha registrado un nuevo comprobante de pago en el sistema.\n\n🔸 Código del pedido: ${codigo}\n🔸 Método de pago: ${metodo.toUpperCase()}\n🔸 Monto: ${monto}\n🔸 Usuario Roblox: ${robloxUser}\n🔸 Correo del cliente: ${email}\n🔸 Fecha y hora: ${hora}\n\nPor favor, ingresa al panel de administración para revisar el comprobante y gestionar (Aceptar/Rechazar) este pedido.`;
+                    
+                    const templateParamsAdmin = {
+                        to_email: 'oficialdarkmatter@gmail.com',
+                        message: mensajeAdmin
+                    };
+                    await emailjs.send('service_hu31i2y', 'template_7xutlds', templateParamsAdmin);
 
-                alert("✅ Tu comprobante se envió correctamente. Estaremos revisando tu compra de 5 minutos a 4 horas. Recibirás tu key a tu correo.");
-                form.reset();
-                ocultarCarga(form);
-            } catch (error) {
-                console.error("Error guardando pedido global o enviando correo:", error);
-                alert("Ocurrió un error al enviar el comprobante. Por favor intenta de nuevo.");
-                ocultarCarga(form);
-            }
+                    alert("✅ Tu comprobante se envió correctamente. Estaremos revisando tu compra de 5 minutos a 4 horas. Recibirás tu key a tu correo.");
+                    form.reset();
+                    ocultarCarga(form);
+                } catch (error) {
+                    console.error("Error guardando pedido global o enviando correo:", error);
+                    alert("Ocurrió un error al enviar el comprobante. Por favor intenta de nuevo.");
+                    ocultarCarga(form);
+                }
+            };
+            reader.readAsDataURL(file);
         }
 
         async function cargarPedidosAdmin() {
