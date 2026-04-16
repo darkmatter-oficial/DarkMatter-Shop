@@ -156,6 +156,7 @@
             margin-bottom: 20px;
             border-bottom: 2px solid #334155;
             padding-bottom: 10px;
+            flex-wrap: wrap;
         }
 
         .tab-btn {
@@ -168,6 +169,7 @@
             flex: 1;
             transition: 0.3s;
             font-size: 0.9em;
+            min-width: 120px;
         }
 
         .tab-btn.active {
@@ -401,7 +403,7 @@
 </head>
 <body>
 
-    <div class="version-tag">v4.3</div>
+    <div class="version-tag">v4.1</div>
 
     <div id="modalKeys">
         <div class="modal-content">
@@ -457,6 +459,7 @@
             <button class="tab-btn active" id="tabNequi" onclick="cambiarPestana('nequi')">Comprar con Nequi</button>
             <button class="tab-btn" id="tabPaypal" onclick="cambiarPestana('paypal')">Comprar con PayPal</button>
             <button class="tab-btn" id="tabDelta" onclick="cambiarPestana('delta')">Descargar Delta</button>
+            <button class="tab-btn" id="tabFree" onclick="cambiarPestana('free-key')">Key 2H Gratis</button>
         </div>
 
         <div id="nequi" class="tab-content active">
@@ -648,6 +651,22 @@
             <button onclick="descargarDelta()" class="btn-action" style="background-color: #8b5cf6;">Descargar Delta Executor</button>
         </div>
 
+        <div id="free-key" class="tab-content">
+            <h2 style="text-align: center; color: #ffb703;">🔓 Key de 2 Horas Gratis</h2>
+            <div class="instructions" style="text-align: center;">
+                <p>Para obtener una Key de 2 horas sin pagar, debes completar una serie de anuncios cortos.</p>
+                <p><strong>Importante:</strong> Al terminar el anuncio, serás redirigido aquí y se enviará tu Key automáticamente a tu correo.</p>
+            </div>
+
+            <button class="btn-action" onclick="irALinkvertise()" style="background-color: #f59e0b; font-size: 1.1em;">
+                ¡Empezar a ver anuncios! 🚀
+            </button>
+            
+            <p style="text-align: center; font-size: 0.8em; color: #94a3b8; margin-top: 15px;">
+                * El proceso toma aproximadamente 1 minuto.
+            </p>
+        </div>
+
         <div id="adminPanel" class="tab-content">
             <h2 style="text-align: center; color: var(--primary);">Administrar Pedidos Globales</h2>
             <p style="text-align: center; font-size: 0.9em; color: #94a3b8; margin-bottom: 20px;">Historial de todos los pedidos realizados por los usuarios.</p>
@@ -751,7 +770,107 @@
                 alert("✅ Tu comprobante se envió correctamente. Estaremos revisando tu compra de 5 minutos a 4 horas. Recibirás tu key a tu correo.");
                 window.history.replaceState({}, document.title, window.location.pathname);
             }
+            if (urlParams.get('status') === 'ad_completed') {
+                procesarKeyGratis();
+            }
         };
+
+        function irALinkvertise() {
+            alert("Serás redirigido a Linkvertise. Completa las tareas y al finalizar volverás aquí para recibir tu Key de 2 horas.");
+            window.location.href = "https://link-center.net/5116981/FIGf3YGXqNhz";
+        }
+
+        async function procesarKeyGratis() {
+            const correo = localStorage.getItem('googleEmailDarkMatter');
+            if (!correo) {
+                alert("Anuncio completado, pero debes iniciar sesión para reclamar tu key de 2 horas.");
+                return;
+            }
+
+            alert("Verificando anuncio... Generando tu Key de 2 horas, esto tomará unos segundos.");
+
+            const nuevaKey = generarKeyAleatoria(30);
+            
+            // Calcular fecha de expiración sumando 2 horas
+            const fecha = new Date();
+            fecha.setHours(fecha.getHours() + 2);
+            const y = fecha.getFullYear();
+            const m = String(fecha.getMonth() + 1).padStart(2, '0');
+            const d = String(fecha.getDate()).padStart(2, '0');
+            const hh = String(fecha.getHours()).padStart(2, '0');
+            const mm = String(fecha.getMinutes()).padStart(2, '0');
+            const ss = String(fecha.getSeconds()).padStart(2, '0');
+            const fechaExp = `${y}-${m}-${d} ${hh}:${mm}:${ss}`;
+
+            try {
+                await fetch(`https://key-sistem-roblox-dm-default-rtdb.firebaseio.com/keys/${nuevaKey}.json`, {
+                    method: "PUT",
+                    body: JSON.stringify({
+                        expira: fechaExp,
+                        dispositivo: "DARKMATTER UNIVERSAL",
+                        telefono: "DARKMATTER UNIVERSAL",
+                        nombreRoblox: "DARKMATTER UNIVERSAL",
+                        correo: correo,
+                        costo: "DARKMATTER UNIVERSAL"
+                    })
+                });
+
+                const mensajePersonalizado = `==================================================
+🌟 BIENVENIDO A DARKMATTER PANEL 🌟
+==================================================
+
+Estimado usuario,
+
+Nos complace informarte que tu compra ha sido validada exitosamente. Tu acceso premium a DarkMatter ha sido activado.
+
+--------------------------------------------------
+🔑 TU KEY DE ACCESO PRIVADA
+${nuevaKey}
+--------------------------------------------------
+
+🌐 PANEL DE GESTIÓN DE CUENTA
+Para gestionar tu key, ver su estado o agregar afiliados, ingresa a:
+👉 https://darkmatter-oficial.github.io/DarkMatter-Shop/
+
+📅 DETALLES DE TU SUSCRIPCIÓN
+• Fecha de Expiración: ${fechaExp} (Hora Colombia)
+• Costo de la Suscripción: DARKMATTER UNIVERSAL
+
+👤 PERFIL ASIGNADO
+• Usuario de Roblox: DARKMATTER UNIVERSAL
+• Dispositivo Vinculado: DARKMATTER UNIVERSAL
+• Teléfono de Contacto: DARKMATTER UNIVERSAL
+
+--------------------------------------------------
+💻 SCRIPT DE EJECUCIÓN (Copia y pega en Delta Executor)
+
+loadstring(game:HttpGet("https://raw.githubusercontent.com/SergioYT01/DarkMatter_Key/refs/heads/main/DarkMatter_key.lua"))()
+
+--------------------------------------------------
+⚠️ TÉRMINOS Y REGLAS DE SEGURIDAD ⚠️
+1. Tu Key es ESTRICTAMENTE PERSONAL E INTRANSFERIBLE.
+2. El uso compartido de la Key resultará en la suspensión automática y permanente de la misma.
+3. Esta Key está vinculada de manera exclusiva al dispositivo registrado (DARKMATTER UNIVERSAL).
+
+Agradecemos tu confianza en DarkMatter. ¡Disfruta de la mejor experiencia!
+
+Atentamente,
+El Equipo de DarkMatter.
+==================================================`;
+
+                const templateParams = {
+                    to_email: correo,
+                    message: mensajePersonalizado
+                };
+                await emailjs.send('service_hu31i2y', 'template_7xutlds', templateParams);
+                
+                alert("✅ La key de 2 horas fue enviada a tu correo.");
+                window.history.replaceState({}, document.title, window.location.pathname);
+            } catch (error) {
+                console.error("Error generando key gratis:", error);
+                alert("Hubo un problema enviando tu key. Intenta más tarde.");
+            }
+        }
 
         async function buscarKeysVinculadas(correo) {
             try {
