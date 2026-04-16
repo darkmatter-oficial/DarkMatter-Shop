@@ -403,7 +403,7 @@
 </head>
 <body>
 
-    <div class="version-tag">v4.3</div>
+    <div class="version-tag">v4.1</div>
 
     <div id="modalKeys">
         <div class="modal-content">
@@ -764,6 +764,10 @@
                 if (correo.toLowerCase() === 'oficialdarkmatter@gmail.com') {
                     document.getElementById('tabAdmin').style.display = 'block';
                 }
+
+                // Iniciar verificación de límite de key gratuita para el contador
+                actualizarContadorKeyGratis(correo);
+                setInterval(() => actualizarContadorKeyGratis(correo), 1000);
             }
 
             const urlParams = new URLSearchParams(window.location.search);
@@ -775,6 +779,45 @@
                 procesarKeyGratis();
             }
         };
+
+        async function actualizarContadorKeyGratis(correo) {
+            const btn = document.getElementById('btnFreeKeyStart');
+            if (!btn || !correo) return;
+
+            const ip = await getIP();
+            const ipKey = ip.replaceAll('.', '_');
+            const hoy = new Date().toISOString().split('T')[0];
+
+            try {
+                const res = await fetch(`https://key-sistem-roblox-dm-default-rtdb.firebaseio.com/free_key_limit/${ipKey}.json`);
+                const lastClaim = await res.json();
+
+                if (lastClaim && lastClaim.fecha === hoy) {
+                    const ahora = new Date();
+                    const mañana = new Date();
+                    mañana.setDate(mañana.getDate() + 1);
+                    mañana.setHours(0, 0, 0, 0);
+
+                    const diff = mañana.getTime() - ahora.getTime();
+                    
+                    if (diff > 0) {
+                        const h = Math.floor(diff / (1000 * 60 * 60));
+                        const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+                        const s = Math.floor((diff % (1000 * 60)) / 1000);
+                        
+                        btn.innerText = `Disponible en: ${h}h ${m}m ${s}s`;
+                        btn.disabled = true;
+                        btn.style.backgroundColor = "#475569";
+                    } else {
+                        btn.innerText = "¡Empezar a ver anuncios! 🚀";
+                        btn.disabled = false;
+                        btn.style.backgroundColor = "#f59e0b";
+                    }
+                }
+            } catch (error) {
+                console.error("Error en contador free key:", error);
+            }
+        }
 
         async function getIP() {
             try {
