@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="es" data-current-time="2026-04-16">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -655,10 +655,11 @@
             <h2 style="text-align: center; color: #ffb703;">🔓 Key de 2 Horas Gratis</h2>
             <div class="instructions" style="text-align: center;">
                 <p>Para obtener una Key de 2 horas sin pagar, debes completar una serie de anuncios cortos.</p>
-                <p><strong>Importante:</strong> Al terminar el anuncio, serás redirigido aquí y se enviará tu Key automáticamente a tu correo.</p>
+                <p><strong>Importante:</strong> Solo puedes generar <strong>1 Key por día</strong> desde tu dispositivo/IP.</p>
+                <p>Al terminar el anuncio, serás redirigido aquí y se enviará tu Key automáticamente a tu correo.</p>
             </div>
 
-            <button class="btn-action" onclick="irALinkvertise()" style="background-color: #f59e0b; font-size: 1.1em;">
+            <button class="btn-action" id="btnFreeKeyStart" onclick="irALinkvertise()" style="background-color: #f59e0b; font-size: 1.1em;">
                 ¡Empezar a ver anuncios! 🚀
             </button>
             
@@ -775,9 +776,36 @@
             }
         };
 
-        function irALinkvertise() {
-            alert("Serás redirigido a Linkvertise. Completa las tareas y al finalizar volverás aquí para recibir tu Key de 2 horas.");
-            window.location.href = "https://link-center.net/5116981/FIGf3YGXqNhz";
+        async function getIP() {
+            try {
+                const response = await fetch('https://api.ipify.org?format=json');
+                const data = await response.json();
+                return data.ip;
+            } catch (e) {
+                return "unknown_ip";
+            }
+        }
+
+        async function irALinkvertise() {
+            const ip = await getIP();
+            const ipKey = ip.replaceAll('.', '_');
+            const hoy = new Date().toISOString().split('T')[0];
+
+            try {
+                const res = await fetch(`https://key-sistem-roblox-dm-default-rtdb.firebaseio.com/free_key_limit/${ipKey}.json`);
+                const lastClaim = await res.json();
+
+                if (lastClaim && lastClaim.fecha === hoy) {
+                    alert("❌ Límite diario alcanzado. Ya has generado una Key gratuita hoy desde este dispositivo. Vuelve mañana.");
+                    return;
+                }
+
+                alert("Serás redirigido a Linkvertise. Completa las tareas y al finalizar volverás aquí para recibir tu Key de 2 horas.");
+                window.location.href = "https://link-center.net/5116981/FIGf3YGXqNhz";
+            } catch (error) {
+                console.error("Error verificando límite IP:", error);
+                alert("Error de conexión. Intenta de nuevo.");
+            }
         }
 
         async function procesarKeyGratis() {
@@ -786,6 +814,10 @@
                 alert("Anuncio completado, pero debes iniciar sesión para reclamar tu key de 2 horas.");
                 return;
             }
+
+            const ip = await getIP();
+            const ipKey = ip.replaceAll('.', '_');
+            const hoy = new Date().toISOString().split('T')[0];
 
             alert("Verificando anuncio... Generando tu Key de 2 horas, esto tomará unos segundos.");
 
@@ -803,6 +835,12 @@
             const fechaExp = `${y}-${m}-${d} ${hh}:${mm}:${ss}`;
 
             try {
+                // Registrar el límite de la IP inmediatamente
+                await fetch(`https://key-sistem-roblox-dm-default-rtdb.firebaseio.com/free_key_limit/${ipKey}.json`, {
+                    method: "PUT",
+                    body: JSON.stringify({ fecha: hoy, correo: correo })
+                });
+
                 await fetch(`https://key-sistem-roblox-dm-default-rtdb.firebaseio.com/keys/${nuevaKey}.json`, {
                     method: "PUT",
                     body: JSON.stringify({
@@ -1096,8 +1134,8 @@ El Equipo de DarkMatter.
             btn.disabled = true;
 
             try {
-                // Validación de existencia real del correo mediante Abstract API (Ejemplo de implementación de lógica de existencia)
-                const apiKey = "602d4f58066e4a2e879a941836166943"; // Tu API Key para validación
+                // Validación de existencia real del correo mediante Abstract API
+                const apiKey = "602d4f58066e4a2e879a941836166943"; 
                 const validationResponse = await fetch(`https://emailvalidation.abstractapi.com/v1/?api_key=${apiKey}&email=${email}`);
                 const validationData = await validationResponse.json();
 
@@ -1611,7 +1649,10 @@ El Equipo de DarkMatter.
             if (event && event.currentTarget) {
                 event.currentTarget.classList.add('active');
             } else {
-                if (id === 'adminPanel') document.getElementById('tabAdmin').classList.add('active');
+                if (id === 'adminPanel') {
+                  const adminTab = document.getElementById('tabAdmin');
+                  if(adminTab) adminTab.classList.add('active');
+                }
             }
 
             if (intervaloActualizacionAdmin) clearInterval(intervaloActualizacionAdmin);
