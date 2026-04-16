@@ -965,7 +965,7 @@
             document.getElementById('modalKeys').style.display = 'none';
         }
 
-        async function enviarCodigoVerificacion() {
+        function enviarCodigoVerificacion() {
             const email = document.getElementById('googleEmailInput').value;
             if (!email.includes('@')) {
                 alert('Ingresa un correo válido.');
@@ -973,44 +973,32 @@
             }
 
             const btn = document.getElementById('btnEnviarCodigo');
-            btn.innerText = "Validando correo...";
+            btn.innerText = "Buscando cuenta...";
             btn.disabled = true;
 
-            try {
-                // Validación de existencia real del correo mediante Abstract API (Ejemplo de implementación de lógica de existencia)
-                const apiKey = "602d4f58066e4a2e879a941836166943"; // Tu API Key para validación
-                const validationResponse = await fetch(`https://emailvalidation.abstractapi.com/v1/?api_key=${apiKey}&email=${email}`);
-                const validationData = await validationResponse.json();
+            correoTemporal = email;
 
-                if (validationData.deliverability === "UNDELIVERABLE") {
-                    alert("❌ El correo ingresado no existe. Por favor, intenta de nuevo con un correo real.");
+            // Verificar si el usuario ya tiene una contraseña creada en Firebase
+            fetch(`https://key-sistem-roblox-dm-default-rtdb.firebaseio.com/usuarios_auth/${email.replace('.', '_')}.json`)
+                .then(res => res.json())
+                .then(userData => {
+                    if (userData && userData.password) {
+                        document.getElementById('step1').style.display = 'none';
+                        document.getElementById('stepPassword').style.display = 'block';
+                        document.getElementById('passDesc').innerText = "Bienvenido de nuevo. Ingresa tu contraseña.";
+                    } else {
+                        document.getElementById('step1').style.display = 'none';
+                        document.getElementById('stepPassword').style.display = 'block';
+                        document.getElementById('passDesc').innerText = "Correo nuevo detectado. Crea una contraseña para tu cuenta.";
+                        document.getElementById('btnConfirmarPass').innerText = "Crear Contraseña";
+                    }
+                })
+                .catch(err => {
+                    console.error("Error verificando usuario:", err);
+                    alert("Error de conexión.");
                     btn.disabled = false;
                     btn.innerText = "Enviar Código";
-                    return;
-                }
-
-                correoTemporal = email;
-
-                // Verificar si el usuario ya tiene una contraseña creada en Firebase
-                const res = await fetch(`https://key-sistem-roblox-dm-default-rtdb.firebaseio.com/usuarios_auth/${email.replace('.', '_')}.json`);
-                const userData = await res.json();
-
-                if (userData && userData.password) {
-                    document.getElementById('step1').style.display = 'none';
-                    document.getElementById('stepPassword').style.display = 'block';
-                    document.getElementById('passDesc').innerText = "Bienvenido de nuevo. Ingresa tu contraseña.";
-                } else {
-                    document.getElementById('step1').style.display = 'none';
-                    document.getElementById('stepPassword').style.display = 'block';
-                    document.getElementById('passDesc').innerText = "Correo nuevo detectado. Crea una contraseña para tu cuenta.";
-                    document.getElementById('btnConfirmarPass').innerText = "Crear Contraseña";
-                }
-            } catch (err) {
-                console.error("Error verificando correo:", err);
-                alert("Hubo un problema al validar el correo. Asegúrate de que sea un correo válido.");
-                btn.disabled = false;
-                btn.innerText = "Enviar Código";
-            }
+                });
         }
 
         async function procesarPassword() {
