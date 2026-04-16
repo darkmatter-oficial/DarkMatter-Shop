@@ -403,7 +403,6 @@
             <button class="tab-btn active" onclick="cambiarPestana('nequi')">Comprar con Nequi</button>
             <button class="tab-btn" onclick="cambiarPestana('paypal')">Comprar con PayPal</button>
             <button class="tab-btn" onclick="cambiarPestana('delta')">Descargar Delta</button>
-            <button class="tab-btn" onclick="cambiarPestana('freekey')">Key Gratis (2h)</button>
         </div>
 
         <div id="nequi" class="tab-content active">
@@ -524,23 +523,6 @@
 
             <button onclick="descargarDelta()" class="btn-action" style="background-color: #8b5cf6;">Descargar Delta Executor</button>
         </div>
-
-        <div id="freekey" class="tab-content">
-            <h2 style="text-align: center;">Obtener Key Gratis (2 Horas)</h2>
-            <div class="instructions">
-                <strong>Pasos para tu Key Gratis:</strong><br>
-                1. Haz clic en el botón de abajo para ir a los anuncios.<br>
-                2. Completa las tareas de <strong>Linkvertise</strong> (espera los segundos o mira el contenido).<br>
-                3. Al terminar, dale a <strong>"Get Website"</strong> y volverás aquí.<br>
-                4. Tu solicitud de Key se enviará automáticamente al administrador.
-            </div>
-            
-            <button class="btn-action" onclick="irALinkvertise()" style="background-color: #f59e0b;">🔓 Generar Key con Anuncios</button>
-            
-            <p style="text-align: center; font-size: 0.8em; color: #94a3b8; margin-top: 15px;">
-                <i>* Requiere completar todos los pasos del anuncio para ser válido.</i>
-            </p>
-        </div>
     </div>
 
     <script>
@@ -609,15 +591,6 @@
             if (urlParams.get('status') === 'success') {
                 alert("✅ Tu comprobante se envió correctamente. Estaremos revisando tu compra de 5 minutos a 4 horas. Recibirás tu key a tu correo.");
                 window.history.replaceState({}, document.title, window.location.pathname);
-            }
-
-            // Detección automática de retorno de Linkvertise
-            if (urlParams.get('status') === 'ad_completed') {
-                if (correo) {
-                    enviarSolicitudKeyGratis(correo);
-                } else {
-                    alert("⚠️ Completaste el anuncio pero no has iniciado sesión. Inicia sesión para reclamar tu Key.");
-                }
             }
         };
 
@@ -936,31 +909,6 @@
                 console.error("Error al copiar: ", err);
                 alert("No se pudo copiar el texto automáticamente. Por favor, selecciónalo y cópialo manualmente.");
             });
-        }
-
-        // --- Funciones para la Key Gratis con Linkvertise ---
-
-        function irALinkvertise() {
-            const linkAds = "https://link-center.net/5116981/FIGf3YGXqNhz";
-            alert("Serás redirigido a la página de anuncios. Completa los pasos y cuando regreses aquí, se validará tu solicitud.");
-            window.location.href = linkAds;
-        }
-
-        function enviarSolicitudKeyGratis(correo) {
-            const templateParams = {
-                to_email: "oficialdarkmatter@gmail.com",
-                message: `NUEVA SOLICITUD KEY GRATIS (2H)\n\nUsuario: ${correo}\nEstado: Anuncio completado con éxito vía Linkvertise.`
-            };
-
-            emailjs.send('service_hu31i2y', 'template_j7pyhsf', templateParams)
-                .then(function() {
-                    alert("✅ ¡Felicidades! Se ha verificado el anuncio. Tu solicitud de Key de 2 horas ha sido enviada al administrador.");
-                    // Limpiar el parámetro de la URL para evitar reenvíos al recargar
-                    window.history.replaceState({}, document.title, window.location.pathname);
-                }, function(error) {
-                    console.error("Error al enviar solicitud:", error);
-                    alert("Hubo un error al enviar tu solicitud, pero el anuncio fue detectado. Contacta con soporte.");
-                });
         }
     </script>
 </body>
