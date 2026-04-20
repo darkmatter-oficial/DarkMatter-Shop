@@ -114,16 +114,20 @@ async function iniciarBot() {
                 ref.once('value', async (snapshot) => {
                     const data = snapshot.val();
                     
-                    // Verificamos que existan los datos y coincidan
-                    if (data && data.correo.toLowerCase() === step.email && data.contrasena === passInput) {
-                        const res = `✅ *DATOS ENCONTRADOS*\n\n` +
-                                    `👤 *User:* ${data.nombreRoblox}\n` +
-                                    `📅 *Expira:* ${data.expira}\n` +
-                                    `📱 *Device:* ${data.dispositivo}\n` +
-                                    `💰 *Costo:* ${data.costo}`;
-                        await sock.sendMessage(from, { text: res });
+                    // Verificamos que existan los datos y que los campos no sean undefined
+                    if (data && data.correo && data.contrasena) {
+                        if (data.correo.toLowerCase() === step.email && data.contrasena === passInput) {
+                            const res = `✅ *DATOS ENCONTRADOS*\n\n` +
+                                        `👤 *User:* ${data.nombreRoblox}\n` +
+                                        `📅 *Expira:* ${data.expira}\n` +
+                                        `📱 *Device:* ${data.dispositivo}\n` +
+                                        `💰 *Costo:* ${data.costo}`;
+                            await sock.sendMessage(from, { text: res });
+                        } else {
+                            await sock.sendMessage(from, { text: '❌ *Error:* Los datos no coinciden.' });
+                        }
                     } else {
-                        await sock.sendMessage(from, { text: '❌ *Error:* Los datos no coinciden o la Key es inválida.' });
+                        await sock.sendMessage(from, { text: '❌ *Error:* La Key no existe o faltan datos en el registro.' });
                     }
                     delete tempState[from]; // Limpiar estado al terminar
                 });
