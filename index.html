@@ -399,31 +399,11 @@
             font-size: 0.9em;
             font-style: italic;
         }
-
-        /* Pantalla de bloqueo por mala conexión */
-        #bloqueoConexion {
-            display: none;
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: var(--bg-dark);
-            z-index: 20000;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            text-align: center;
-            padding: 20px;
-        }
     </style>
 </head>
 <body>
 
-    <div class="version-tag">v4.1</div>
-
-    <div id="bloqueoConexion">
-        <h2 style="color: var(--danger);">⚠️ Conexión Inestable Detectada</h2>
-        <p>Estamos validando la estabilidad de tu internet para asegurar que el sistema de keys funcione correctamente.</p>
-        <p style="font-size: 0.9em; color: #94a3b8;">Por favor espera unos segundos...</p>
-    </div>
+    <div class="version-tag">v4.5</div>
 
     <div id="modalKeys">
         <div class="modal-content">
@@ -474,7 +454,7 @@
         <p>Actualmente no estamos aceptando compras. Por favor, regresa más tarde.</p>
     </div>
 
-    <div class="container" id="tiendaContenedor" style="opacity: 0; pointer-events: none; transition: opacity 0.5s;">
+    <div class="container" id="tiendaContenedor">
         <div class="nav-tabs">
             <button class="tab-btn active" id="tabNequi" onclick="cambiarPestana('nequi')">Comprar con Nequi</button>
             <button class="tab-btn" id="tabPaypal" onclick="cambiarPestana('paypal')">Comprar con PayPal</button>
@@ -679,8 +659,8 @@
                 <p>Al terminar el anuncio, serás redirigido aquí y se enviará tu Key automáticamente a tu correo.</p>
             </div>
 
-            <button class="btn-action" id="btnFreeKeyStart" onclick="irALinkvertise()" style="background-color: #f59e0b; font-size: 1.1em;" disabled>
-                Validando Conexión... ⏳
+            <button class="btn-action" id="btnFreeKeyStart" onclick="irALinkvertise()" style="background-color: #f59e0b; font-size: 1.1em;">
+                ¡Empezar a ver anuncios! 🚀
             </button>
             
             <p style="text-align: center; font-size: 0.8em; color: #94a3b8; margin-top: 15px;">
@@ -765,48 +745,8 @@
         let pedidoActualParaGestion = null;
         let intervaloActualizacionRealTime = null;
         let intervaloActualizacionAdmin = null;
-        let internetEstable = false;
-
-        async function validarConexionSegura() {
-            const pantallaBloqueo = document.getElementById('bloqueoConexion');
-            const tienda = document.getElementById('tiendaContenedor');
-            pantallaBloqueo.style.display = 'flex';
-
-            let intentos = 0;
-            const maxIntentos = 3;
-
-            async function test() {
-                try {
-                    const start = Date.now();
-                    const res = await fetch("https://api.ipify.org?format=json", { cache: "no-store" });
-                    const end = Date.now();
-                    const latencia = end - start;
-
-                    if (res.ok && latencia < 1500) {
-                        intentos++;
-                    } else {
-                        intentos = 0;
-                    }
-                } catch (e) {
-                    intentos = 0;
-                }
-
-                if (intentos >= maxIntentos) {
-                    internetEstable = true;
-                    pantallaBloqueo.style.display = 'none';
-                    tienda.style.opacity = '1';
-                    tienda.style.pointerEvents = 'auto';
-                    const btn = document.getElementById('btnFreeKeyStart');
-                    if (btn) btn.disabled = false;
-                } else {
-                    setTimeout(test, 1000);
-                }
-            }
-            test();
-        }
 
         window.onload = function() {
-            validarConexionSegura();
             cargarPrefijos();
             const correo = localStorage.getItem('googleEmailDarkMatter');
             if (correo) {
@@ -842,7 +782,7 @@
 
         async function actualizarContadorKeyGratis(correo) {
             const btn = document.getElementById('btnFreeKeyStart');
-            if (!btn || !correo || !internetEstable) return;
+            if (!btn || !correo) return;
 
             const ip = await getIP();
             const ipKey = ip.replaceAll('.', '_');
@@ -894,11 +834,6 @@
         }
 
         async function irALinkvertise() {
-            if(!internetEstable) {
-                alert("Espera a que la conexión sea estable.");
-                return;
-            }
-
             const ip = await getIP();
             const ipKey = ip.replaceAll('.', '_');
             const hoy = new Date().toISOString().split('T')[0];
@@ -921,12 +856,6 @@
         }
 
         async function procesarKeyGratis() {
-            if(!internetEstable) {
-                alert("⚠️ Conexión inestable. Esperando estabilidad para validar la key...");
-                setTimeout(procesarKeyGratis, 3000);
-                return;
-            }
-
             const correo = localStorage.getItem('googleEmailDarkMatter');
             if (!correo) {
                 alert("Anuncio completado, pero debes iniciar sesión para reclamar tu key de 2 horas.");
@@ -938,18 +867,19 @@
             const hoy = new Date().toISOString().split('T')[0];
             const horaExacta = obtenerHoraColombia();
 
-            // VALIDACIÓN DE SEGURIDAD: Verificar si la IP ya reclamó hoy antes de proceder
+            // BLOQUEO DE SEGURIDAD REFORZADO: Verificar si la IP ya reclamó hoy antes de procesar
             try {
                 const resLimit = await fetch(`https://key-sistem-roblox-dm-default-rtdb.firebaseio.com/free_key_limit/${ipKey}.json`);
                 const lastClaim = await resLimit.json();
 
                 if (lastClaim && lastClaim.fecha === hoy) {
-                    alert("❌ Error de seguridad: Ya has generado una Key gratuita hoy desde esta dirección IP o se detectó un intento de duplicación.");
+                    alert("❌ Error: Ya has reclamado una Key gratuita hoy. El sistema ha bloqueado este intento duplicado.");
                     window.history.replaceState({}, document.title, window.location.pathname);
                     return;
                 }
             } catch (error) {
-                console.error("Error validando IP en procesamiento:", error);
+                console.error("Error crítico validando IP:", error);
+                alert("Error de red al validar tu sesión. Intenta de nuevo.");
                 return;
             }
 
@@ -957,7 +887,6 @@
 
             const nuevaKey = generarKeyAleatoria(30);
             
-            // Calcular fecha de expiración sumando 2 horas
             const fecha = new Date();
             fecha.setHours(fecha.getHours() + 2);
             const y = fecha.getFullYear();
@@ -969,7 +898,7 @@
             const fechaExp = `${y}-${m}-${d} ${hh}:${mm}:${ss}`;
 
             try {
-                // Registrar el límite de la IP inmediatamente con la hora y minuto exacto ANTES de enviar la key
+                // Registrar el límite de la IP de forma asíncrona pero inmediata
                 await fetch(`https://key-sistem-roblox-dm-default-rtdb.firebaseio.com/free_key_limit/${ipKey}.json`, {
                     method: "PUT",
                     body: JSON.stringify({ fecha: hoy, correo: correo, hora_generacion: horaExacta })
@@ -1062,7 +991,6 @@ El Equipo de DarkMatter.
                     }
                 }
 
-                // Solo renderizar si la data ha cambiado para evitar parpadeos
                 if (JSON.stringify(nuevasKeys) !== JSON.stringify(keysEncontradas)) {
                     keysEncontradas = nuevasKeys;
                     if (keysEncontradas.length > 0) {
@@ -1096,8 +1024,6 @@ El Equipo de DarkMatter.
                     }
                 });
 
-                const keyId = item.id;
-
                 div.innerHTML = `
                     <div style="display: flex; justify-content: space-between; align-items: flex-start;">
                         <p style="margin: 0; width: 100%;"><strong>Key #${index + 1}:</strong> <span class="key-text" style="display: inline-block;">${item.id}</span></p>
@@ -1124,7 +1050,7 @@ El Equipo de DarkMatter.
                             ${afiliadosHTML || '<p style="font-size: 0.8em; color: #94a3b8;">Sin afiliados</p>'}
                         </ul>
                         <div class="add-afiliado-group">
-                            <input type="text" id="input-afiliado-${keyId}" placeholder="Nombre en Roblox">
+                            <input type="text" id="input-afiliado-${item.id}" placeholder="Nombre en Roblox">
                             <button class="btn-add-afiliado" onclick="gestionarAfiliadoPersonalizado('add', '${item.id}')">Agregar</button>
                         </div>
                     </div>
@@ -1141,11 +1067,10 @@ El Equipo de DarkMatter.
             const timerElement = document.getElementById(`timer-${id}`);
             
             function actualizar() {
+                if (!timerElement) return;
                 const exp = new Date(fechaFin.replace(" ", "T")).getTime();
                 const ahora = new Date().getTime();
                 const diff = exp - ahora;
-
-                if (!timerElement) return;
 
                 if (diff <= 0) {
                     timerElement.innerText = "Expirado";
@@ -1270,7 +1195,6 @@ El Equipo de DarkMatter.
             btn.disabled = true;
 
             try {
-                // Validación de existencia real del correo mediante Abstract API
                 const apiKey = "602d4f58066e4a2e879a941836166943"; 
                 const validationResponse = await fetch(`https://emailvalidation.abstractapi.com/v1/?api_key=${apiKey}&email=${email}`);
                 const validationData = await validationResponse.json();
@@ -1284,7 +1208,6 @@ El Equipo de DarkMatter.
 
                 correoTemporal = email;
 
-                // Verificar si el usuario ya tiene una contraseña creada en Firebase
                 const res = await fetch(`https://key-sistem-roblox-dm-default-rtdb.firebaseio.com/usuarios_auth/${email.replace('.', '_')}.json`);
                 const userData = await res.json();
 
@@ -1331,7 +1254,6 @@ El Equipo de DarkMatter.
                         btn.innerText = "Continuar";
                     }
                 } else {
-                    // Crear contraseña nueva
                     await fetch(`https://key-sistem-roblox-dm-default-rtdb.firebaseio.com/usuarios_auth/${emailKey}.json`, {
                         method: "PUT",
                         body: JSON.stringify({ password: password })
@@ -1541,7 +1463,6 @@ El Equipo de DarkMatter.
                         body: JSON.stringify(pedidoData)
                     });
 
-                    // Notificación de nueva compra al administrador
                     const mensajeAdmin = `📢 NUEVO PEDIDO RECIBIDO - DARKMATTER SHOP 📢\n\nSe ha registrado un nuevo comprobante de pago en el sistema.\n\n🔸 Código del pedido: ${codigo}\n🔸 Método de pago: ${metodo.toUpperCase()}\n🔸 Monto: ${monto}\n🔸 Usuario Roblox: ${robloxUser}\n🔸 Correo del cliente: ${email}\n🔸 Fecha y hora: ${hora}\n\nPor favor, ingresa al panel de administración para revisar el comprobante y gestionar (Aceptar/Rechazar) este pedido.`;
                     
                     const templateParamsAdmin = {
@@ -1647,7 +1568,6 @@ El Equipo de DarkMatter.
         async function gestionarPedidoAccion(accion) {
             if (!pedidoActualParaGestion) return;
 
-            // Desactivar botones y poner en gris
             const btnAceptar = document.getElementById('btnAceptarGestion');
             const btnRechazar = document.getElementById('btnRechazarGestion');
             const loadingText = document.getElementById('loadingGestion');
@@ -1736,7 +1656,6 @@ El Equipo de DarkMatter.
 
             await fetch(`https://key-sistem-roblox-dm-default-rtdb.firebaseio.com/pedidos_admin/${pedidoActualParaGestion.codigo.replace('#', '')}.json`, { method: "DELETE" });
             
-            // Restaurar estados
             loadingText.style.display = "none";
             btnAceptar.disabled = false;
             btnRechazar.disabled = false;
