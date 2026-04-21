@@ -38,10 +38,13 @@ async function iniciarBot() {
         if (!msg.message || msg.key.fromMe) return;
 
         const from = msg.key.remoteJid;
+        // Limpiamos el ID para evitar errores de ruta en Firebase (quitamos @s.whatsapp.net y puntos)
+        const safeId = from.replace(/[^a-zA-Z0-9]/g, '');
+
         const text = (msg.message.conversation || msg.message.extendedTextMessage?.text || "").trim();
 
         // VALIDACIÓN DE SESIÓN PERSISTENTE
-        const sessionRef = db.ref(`sesiones_whatsapp/${from.replace('@s.whatsapp.net', '')}`);
+        const sessionRef = db.ref(`sesiones_whatsapp/${safeId}`);
         const sessionSnap = await sessionRef.once('value');
         const userData = sessionSnap.val();
 
