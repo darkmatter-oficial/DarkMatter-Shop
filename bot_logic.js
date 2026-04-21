@@ -127,7 +127,7 @@ async function iniciarBot() {
                                  `🔑 *Keys Activas:* ${totalKeys}\n` +
                                  `👥 *Usuarios Registrados:* ${totalUsuarios}\n` +
                                  `📉 *Límite Gratis:* ${limiteGratis}\n` +
-                                 `📡 *Versión:* 2.5.0 Stable\n` +
+                                 `📡 *Versión:* 4.5 Stable\n` +
                                  `⏱️ *Latencia:* Estable (Sincronizada)\n\n` +
                                  `_Información obtenida en tiempo real desde el servidor central._`;
                 await sock.sendMessage(from, { text: statusMsg });
