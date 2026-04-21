@@ -40,13 +40,26 @@ async function iniciarBot() {
         const from = msg.key.remoteJid;
         const text = (msg.message.conversation || msg.message.extendedTextMessage?.text || "").trim();
 
+        // VALIDACIÓN DE SESIÓN PERSISTENTE
+        const sessionRef = db.ref(`sesiones_whatsapp/${from.replace('@s.whatsapp.net', '')}`);
+        const sessionSnap = await sessionRef.once('value');
+        const userData = sessionSnap.val();
+
         // INICIO
         if (text.toLowerCase() === '/darkmatter') {
             delete tempState[from];
+            
+            if (!userData) {
+                tempState[from] = { step: 'LOGIN_EMAIL' };
+                return await sock.sendMessage(from, { text: '🔑 *DARKMATTER LOGIN*\n\nNo detecto una sesión activa para este número.\n\nPor favor, ingresa tu *Correo* vinculado:' });
+            }
+
             const menu = `🌌 *DARKMATTER PANEL* 🌌\n\n` +
+                         `Bienvenido: ${userData.email}\n\n` +
                          `1. Estado del Sistema ✅\n` +
                          `2. Consultar mi Key 🔑\n` +
-                         `3. Soporte Técnico 🛠\n\n` +
+                         `3. Soporte Técnico 🛠\n` +
+                         `4. Obtener Key Gratis (2h) 🎁\n\n` +
                          `_Responde con el número de la opción deseada._`;
             return await sock.sendMessage(from, { text: menu });
         }
@@ -57,14 +70,12 @@ async function iniciarBot() {
             return statusRef.once('value', async (snapshot) => {
                 const allData = snapshot.val() || {};
                 
-                // Extracción de datos desde Firebase según estructura de capturas
                 const valoresPanel = allData['Valores del panel'] || {};
                 const estadoRaw = valoresPanel.Estado || "Desconocido";
                 const totalKeys = allData.keys ? Object.keys(allData.keys).length : 0;
                 const totalUsuarios = allData.usuarios_auth ? Object.keys(allData.usuarios_auth).length : 0;
                 const freeLimit = allData.free_key_limit || "Ilimitado";
                 
-                // Lógica de estado dinámico
                 let estadoSistema;
                 if (estadoRaw.toLowerCase() === "mantenimiento") {
                     estadoSistema = "⚠️ *MANTENIMIENTO*";
@@ -101,51 +112,97 @@ async function iniciarBot() {
             });
         }
 
-        // PASO 1: PEDIR KEY
+        if (text === '4') {
+            const keysRef = db.ref('keys');
+            keysRef.once('value', async (snapshot) => {
+                const keys = snapshot.val() || {};
+                let keyGratisEncontrada = null;
+
+                if (userData) {
+                    for (let id in keys) {
+                        if (keys[id].correo === userData.email && keys[id].dispositivo === "DARKMATTER UNIVERSAL") {
+                            keyGratisEncontrada = { id, ...keys[id] };
+                            break;
+                        }
+                    }
+                }
+
+                let msgGratis = `🎁 *SISTEMA DE KEYS GRATUITAS*\n\n` +
+                                `Puedes obtener una key de 2 horas aquí:\n` +
+                                `🔗 https://linkvertise.com/5116981/FIGf3YGXqNhz?o=sharing\n\n`;
+
+                if (keyGratisEncontrada) {
+                    msgGratis += `🔑 *Tu Key Actual:* ${keyGratisEncontrada.id}\n` +
+                                 `⏳ *Expira:* ${keyGratisEncontrada.expira}`;
+                } else {
+                    msgGratis += `_No tienes ninguna key universal activa vinculada a tu correo._`;
+                }
+                
+                await sock.sendMessage(from, { text: msgGratis });
+            });
+            return;
+        }
+
+        // PASO 1: PEDIR KEY (CON AUTOLOGIN)
         if (text === '2') {
-            tempState[from] = { step: 'KEY' };
-            return await sock.sendMessage(from, { text: '🔍 Ingresa tu *Key*:' });
+            if (!userData) return await sock.sendMessage(from, { text: '❌ Debes iniciar sesión con /darkmatter primero.' });
+            tempState[from] = { step: 'CONSULTA_KEY' };
+            return await sock.sendMessage(from, { text: '🔍 Ingresa la *Key* que deseas consultar:' });
         }
 
         const step = tempState[from];
         if (step) {
-            // PASO 2: RECIBIR KEY -> PEDIR CORREO
-            if (step.step === 'KEY') {
-                step.key = text;
-                step.step = 'EMAIL';
-                await sock.sendMessage(from, { text: '📧 Ahora ingresa tu *Correo*:' });
-            } 
-            // PASO 3: RECIBIR CORREO -> PEDIR CONTRASEÑA
-            else if (step.step === 'EMAIL') {
+            // LÓGICA DE LOGIN PRIMERIZO
+            if (step.step === 'LOGIN_EMAIL') {
                 step.email = text.toLowerCase();
-                step.step = 'PASS';
-                await sock.sendMessage(from, { text: '🔐 Por último, ingresa tu *Contraseña*:' });
-            } 
-            // PASO 4: RECIBIR CONTRASEÑA -> VERIFICAR EN FIREBASE
-            else if (step.step === 'PASS') {
-                const passInput = text;
-                await sock.sendMessage(from, { text: '⏳ Verificando datos...' });
+                step.step = 'LOGIN_PASS';
+                await sock.sendMessage(from, { text: '🔐 Ahora ingresa tu *Contraseña* de DarkMatter:' });
+            }
+            else if (step.step === 'LOGIN_PASS') {
+                const pass = text;
+                await sock.sendMessage(from, { text: '⏳ Validando credenciales...' });
+                
+                const authRef = db.ref('usuarios_auth');
+                authRef.once('value', async (snap) => {
+                    const users = snap.val() || {};
+                    let userFound = null;
+                    
+                    for (let u in users) {
+                        const emailLimpio = u.replace(/_/g, '.');
+                        if (emailLimpio === step.email && users[u].password === pass) {
+                            userFound = users[u];
+                            break;
+                        }
+                    }
 
-                const ref = db.ref(`keys/${step.key}`);
+                    if (userFound) {
+                        await sessionRef.set({ email: step.email, pass: pass });
+                        await sock.sendMessage(from, { text: '✅ *Login Exitoso*\n\nSesión vinculada a tu número. Escribe /darkmatter para ver el menú.' });
+                    } else {
+                        await sock.sendMessage(from, { text: '❌ Correo o contraseña incorrectos.' });
+                    }
+                    delete tempState[from];
+                });
+            }
+            // CONSULTA DE KEY CON DATOS AUTOMÁTICOS
+            else if (step.step === 'CONSULTA_KEY') {
+                const keyInput = text;
+                await sock.sendMessage(from, { text: '⏳ Verificando propiedad de la key...' });
+
+                const ref = db.ref(`keys/${keyInput}`);
                 ref.once('value', async (snapshot) => {
                     const data = snapshot.val();
-                    
-                    // Verificamos que existan los datos y que los campos no sean undefined
-                    if (data && data.correo && data.contrasena) {
-                        if (data.correo.toLowerCase() === step.email && data.contrasena === passInput) {
-                            const res = `✅ *DATOS ENCONTRADOS*\n\n` +
-                                        `👤 *User:* ${data.nombreRoblox}\n` +
-                                        `📅 *Expira:* ${data.expira}\n` +
-                                        `📱 *Device:* ${data.dispositivo}\n` +
-                                        `💰 *Costo:* ${data.costo}`;
-                            await sock.sendMessage(from, { text: res });
-                        } else {
-                            await sock.sendMessage(from, { text: '❌ *Error:* Los datos no coinciden.' });
-                        }
+                    if (data && data.correo && data.correo.toLowerCase() === userData.email) {
+                        const res = `✅ *DATOS DE TU KEY*\n\n` +
+                                    `👤 *User:* ${data.nombreRoblox}\n` +
+                                    `📅 *Expira:* ${data.expira}\n` +
+                                    `📱 *Device:* ${data.dispositivo}\n` +
+                                    `💰 *Costo:* ${data.costo}`;
+                        await sock.sendMessage(from, { text: res });
                     } else {
-                        await sock.sendMessage(from, { text: '❌ *Error:* La Key no existe o faltan datos en el registro.' });
+                        await sock.sendMessage(from, { text: '❌ *Error:* La key no existe o no te pertenece.' });
                     }
-                    delete tempState[from]; // Limpiar estado al terminar
+                    delete tempState[from];
                 });
             }
         }
