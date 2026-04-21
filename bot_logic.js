@@ -53,6 +53,25 @@ async function iniciarBot() {
             delete tempState[from];
             
             if (!userData) {
+                // Buscar si existe alguna key vinculada a este número de teléfono
+                const keysRef = db.ref('keys');
+                const keysSnap = await keysRef.once('value');
+                const allKeys = keysSnap.val() || {};
+                let correoVinculado = null;
+                const numeroLimpio = from.split('@')[0];
+
+                for (let id in allKeys) {
+                    if (allKeys[id].telefono === numeroLimpio) {
+                        correoVinculado = allKeys[id].correo;
+                        break;
+                    }
+                }
+
+                if (correoVinculado) {
+                    tempState[from] = { step: 'CONFIRM_EMAIL', email: correoVinculado.toLowerCase() };
+                    return await sock.sendMessage(from, { text: `🔎 *IDENTIDAD DETECTADA*\n\nHe encontrado el correo: *${correoVinculado}* vinculado a este número.\n\n¿Eres tú?\n1. Sí\n2. No (Usar otro correo)` });
+                }
+
                 tempState[from] = { step: 'LOGIN_EMAIL' };
                 return await sock.sendMessage(from, { text: '🔑 *DARKMATTER LOGIN*\n\nNo detecto una sesión activa para este número.\n\nPor favor, ingresa tu *Correo* vinculado:' });
             }
@@ -62,7 +81,8 @@ async function iniciarBot() {
                          `1. Estado del Sistema ✅\n` +
                          `2. Consultar mi Key 🔑\n` +
                          `3. Soporte Técnico 🛠\n` +
-                         `4. Obtener Key Gratis (2h) 🎁\n\n` +
+                         `4. Obtener Key Gratis (2h) 🎁\n` +
+                         `5. Cerrar Sesión 🚪\n\n` +
                          `_Responde con el número de la opción deseada._`;
             return await sock.sendMessage(from, { text: menu });
         }
@@ -146,6 +166,13 @@ async function iniciarBot() {
             return;
         }
 
+        // OPCIÓN 5: CERRAR SESIÓN
+        if (text === '5') {
+            if (!userData) return;
+            await sessionRef.remove();
+            return await sock.sendMessage(from, { text: '🚪 *SESIÓN CERRADA*\n\nTu cuenta ha sido desvinculada de este número exitosamente.' });
+        }
+
         // PASO 1: PEDIR KEY (CON AUTOLOGIN)
         if (text === '2') {
             if (!userData) return await sock.sendMessage(from, { text: '❌ Debes iniciar sesión con /darkmatter primero.' });
@@ -155,8 +182,18 @@ async function iniciarBot() {
 
         const step = tempState[from];
         if (step) {
+            // LÓGICA DE CONFIRMACIÓN DE CORREO POR NÚMERO
+            if (step.step === 'CONFIRM_EMAIL') {
+                if (text === '1') {
+                    step.step = 'LOGIN_PASS';
+                    await sock.sendMessage(from, { text: `🔐 Perfecto. Ingresa la *Contraseña* para la cuenta: *${step.email}*` });
+                } else {
+                    step.step = 'LOGIN_EMAIL';
+                    await sock.sendMessage(from, { text: '📧 Entendido. Ingresa el *Correo* que deseas usar:' });
+                }
+            }
             // LÓGICA DE LOGIN PRIMERIZO
-            if (step.step === 'LOGIN_EMAIL') {
+            else if (step.step === 'LOGIN_EMAIL') {
                 step.email = text.toLowerCase();
                 step.step = 'LOGIN_PASS';
                 await sock.sendMessage(from, { text: '🔐 Ahora ingresa tu *Contraseña* de DarkMatter:' });
