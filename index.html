@@ -862,6 +862,20 @@
             const ipKey = ip.replaceAll('.', '_');
             const hoy = new Date().toISOString().split('T')[0];
 
+            // VALIDACIÓN DE SEGURIDAD: Verificar si la IP ya reclamó hoy antes de proceder
+            try {
+                const resLimit = await fetch(`https://key-sistem-roblox-dm-default-rtdb.firebaseio.com/free_key_limit/${ipKey}.json`);
+                const lastClaim = await resLimit.json();
+
+                if (lastClaim && lastClaim.fecha === hoy) {
+                    alert("❌ Error de validación: Ya has generado una Key gratuita hoy desde esta dirección IP. No se puede entregar otra key.");
+                    window.history.replaceState({}, document.title, window.location.pathname);
+                    return;
+                }
+            } catch (error) {
+                console.error("Error validando IP en procesamiento:", error);
+            }
+
             alert("Verificando anuncio... Generando tu Key de 2 horas, esto tomará unos segundos.");
 
             const nuevaKey = generarKeyAleatoria(30);
