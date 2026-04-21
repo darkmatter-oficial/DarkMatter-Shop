@@ -861,6 +861,7 @@
             const ip = await getIP();
             const ipKey = ip.replaceAll('.', '_');
             const hoy = new Date().toISOString().split('T')[0];
+            const horaExacta = obtenerHoraColombia();
 
             // VALIDACIÓN DE SEGURIDAD: Verificar si la IP ya reclamó hoy antes de proceder
             try {
@@ -892,10 +893,10 @@
             const fechaExp = `${y}-${m}-${d} ${hh}:${mm}:${ss}`;
 
             try {
-                // Registrar el límite de la IP inmediatamente
+                // Registrar el límite de la IP inmediatamente con la hora y minuto exacto
                 await fetch(`https://key-sistem-roblox-dm-default-rtdb.firebaseio.com/free_key_limit/${ipKey}.json`, {
                     method: "PUT",
-                    body: JSON.stringify({ fecha: hoy, correo: correo })
+                    body: JSON.stringify({ fecha: hoy, correo: correo, hora_generacion: horaExacta })
                 });
 
                 await fetch(`https://key-sistem-roblox-dm-default-rtdb.firebaseio.com/keys/${nuevaKey}.json`, {
@@ -1045,7 +1046,7 @@ El Equipo de DarkMatter.
                             ${afiliadosHTML || '<p style="font-size: 0.8em; color: #94a3b8;">Sin afiliados</p>'}
                         </ul>
                         <div class="add-afiliado-group">
-                            <input type="text" id="input-afiliado-${item.id}" placeholder="Nombre en Roblox">
+                            <input type="text" id="input-afiliado-${keyId}" placeholder="Nombre en Roblox">
                             <button class="btn-add-afiliado" onclick="gestionarAfiliadoPersonalizado('add', '${item.id}')">Agregar</button>
                         </div>
                     </div>
