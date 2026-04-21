@@ -97,7 +97,21 @@ async function iniciarBot() {
                 const estadoRaw = valoresPanel.Estado || "Desconocido";
                 const totalKeys = allData.keys ? Object.keys(allData.keys).length : 0;
                 const totalUsuarios = allData.usuarios_auth ? Object.keys(allData.usuarios_auth).length : 0;
-                const freeLimit = allData.free_key_limit || "Ilimitado";
+                
+                // LÓGICA DE LÍMITE GRATIS (Verificación de canje diario)
+                let limiteGratis = "Disponible";
+                if (userData && userData.email) {
+                    const hoy = new Date().toLocaleString("es-CO", {timeZone: "America/Bogota"}).split(',')[0].replace(/\//g, '-');
+                    const freeKeys = allData.keys || {};
+                    for (let id in freeKeys) {
+                        if (freeKeys[id].correo === userData.email && 
+                            freeKeys[id].dispositivo === "DARKMATTER UNIVERSAL" && 
+                            freeKeys[id].expira && freeKeys[id].expira.includes(hoy)) {
+                            limiteGratis = "Agotado";
+                            break;
+                        }
+                    }
+                }
                 
                 let estadoSistema;
                 if (estadoRaw.toLowerCase() === "mantenimiento") {
@@ -112,7 +126,7 @@ async function iniciarBot() {
                                  `🗄️ *Base de Datos:* Firebase RTDB Online\n` +
                                  `🔑 *Keys Activas:* ${totalKeys}\n` +
                                  `👥 *Usuarios Registrados:* ${totalUsuarios}\n` +
-                                 `📉 *Límite Free:* ${freeLimit}\n` +
+                                 `📉 *Límite Gratis:* ${limiteGratis}\n` +
                                  `📡 *Versión:* 2.5.0 Stable\n` +
                                  `⏱️ *Latencia:* Estable (Sincronizada)\n\n` +
                                  `_Información obtenida en tiempo real desde el servidor central._`;
