@@ -18,12 +18,23 @@ async function iniciarBot() {
     const { state, saveCreds } = await useMultiFileAuthState('sesion_bot');
     const { version } = await fetchLatestBaileysVersion();
 
-    const sock = makeWASocket({
+        const sock = makeWASocket({
         version,
         logger: pino({ level: 'silent' }),
         auth: state,
-        browser: ["DarkMatter Bot", "Chrome", "1.0.0"]
+        browser: ["Ubuntu", "Chrome", "20.0.04"], // Cambié esto para que WhatsApp lo acepte mejor
     });
+
+    // === AGREGA ESTO PARA EL CÓDIGO DE VINCULACIÓN ===
+    if (!sock.authState.creds.registered) {
+        const phoneNumber = "573001125554"; // <--- PON AQUÍ TU NÚMERO CON CÓDIGO DE PAÍS
+        setTimeout(async () => {
+            let code = await sock.requestPairingCode(phoneNumber);
+            code = code?.match(/.{1,4}/g)?.join("-") || code;
+            console.log(`\n\n⭐ TU CÓDIGO DE VINCULACIÓN ES: ${code} ⭐\n\n`);
+        }, 3000);
+    }
+    // ===============================================
 
     sock.ev.on('creds.update', saveCreds);
 
