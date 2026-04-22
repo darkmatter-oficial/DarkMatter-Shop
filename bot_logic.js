@@ -98,6 +98,98 @@ async function iniciarBot() {
             return await sock.sendMessage(from, { text: menu });
         }
 
+        // --- LÓGICA DE DETECCIÓN DE MENSAJES SIN COMANDO ---
+        if (!tempState[from] && text.toLowerCase() !== '/darkmatter') {
+            const bienvenidaMsg = `🌌 *DARKMATTER ASSISTANT* 🌌\n\n` +
+                                 `¡Hola! He detectado que estás intentando comunicarte.\n\n` +
+                                 `¿Deseas usar el *Bot Automático* de la tienda DarkMatter o prefieres hablar directamente con la *Persona* encargada de este número?\n\n` +
+                                 `🟢 Responde *SÍ* para usar el Bot.\n` +
+                                 `🔴 Responde *NO* para hablar en privado con el administrador.`;
+            
+            tempState[from] = { step: 'ASK_BOT_OR_HUMAN' };
+            return await sock.sendMessage(from, { text: bienvenidaMsg });
+        }
+
+        const step = tempState[from];
+        if (step) {
+            // Lógica de elección entre Bot o Humano
+            if (step.step === 'ASK_BOT_OR_HUMAN') {
+                if (text.toLowerCase() === 'si' || text.toLowerCase() === 'sí') {
+                    delete tempState[from];
+                    return await sock.sendMessage(from, { text: `✅ *MODO BOT ACTIVADO*\n\nPara acceder a nuestros servicios y soporte automático, por favor escribe el comando:\n\n👉 */DarkMatter*` });
+                } else if (text.toLowerCase() === 'no') {
+                    delete tempState[from];
+                    return await sock.sendMessage(from, { text: `👤 *MODO PRIVADO ACTIVADO*\n\nAhora estás en modo de chat directo con el dueño del número. Si en algún momento deseas consultar la tienda o tus productos, solo escribe */DarkMatter* para activar el bot.` });
+                } else {
+                    return await sock.sendMessage(from, { text: `⚠️ *POR FAVOR RESPONDE*\n\n¿Quieres hablar con la persona que dirige este número o deseas usar el bot de la tienda DarkMatter?\n\nResponde *SÍ* (Bot) o *NO* (Persona).` });
+                }
+            }
+            
+            // LÓGICA DE CONFIRMACIÓN DE CORREO POR NÚMERO
+            if (step.step === 'CONFIRM_EMAIL') {
+                if (text === '1') {
+                    step.step = 'LOGIN_PASS';
+                    await sock.sendMessage(from, { text: `🔐 Perfecto. Ingresa la *Contraseña* para la cuenta: *${step.email}*` });
+                } else {
+                    step.step = 'LOGIN_EMAIL';
+                    await sock.sendMessage(from, { text: '📧 Entendido. Ingresa el *Correo* que deseas usar:' });
+                }
+            }
+            // LÓGICA DE LOGIN PRIMERIZO
+            else if (step.step === 'LOGIN_EMAIL') {
+                step.email = text.toLowerCase();
+                step.step = 'LOGIN_PASS';
+                await sock.sendMessage(from, { text: '🔐 Ahora ingresa tu *Contraseña* de DarkMatter:' });
+            }
+            else if (step.step === 'LOGIN_PASS') {
+                const pass = text;
+                await sock.sendMessage(from, { text: '⏳ Validando credenciales...' });
+                
+                const authRef = db.ref('usuarios_auth');
+                authRef.once('value', async (snap) => {
+                    const users = snap.val() || {};
+                    let userFound = null;
+                    
+                    for (let u in users) {
+                        const emailLimpio = u.replace(/_/g, '.');
+                        if (emailLimpio === step.email && users[u].password === pass) {
+                            userFound = users[u];
+                            break;
+                        }
+                    }
+
+                    if (userFound) {
+                        await sessionRef.set({ email: step.email, pass: pass });
+                        await sock.sendMessage(from, { text: '✅ *Login Exitoso*\n\nSesión vinculada a tu número. Escribe /darkmatter para ver el menú.' });
+                    } else {
+                        await sock.sendMessage(from, { text: '❌ Correo o contraseña incorrectos.' });
+                    }
+                    delete tempState[from];
+                });
+            }
+            // CONSULTA DE KEY CON DATOS AUTOMÁTICOS
+            else if (step.step === 'CONSULTA_KEY') {
+                const keyInput = text;
+                await sock.sendMessage(from, { text: '⏳ Verificando propiedad de la key...' });
+
+                const ref = db.ref(`keys/${keyInput}`);
+                ref.once('value', async (snapshot) => {
+                    const data = snapshot.val();
+                    if (data && data.correo && data.correo.toLowerCase() === userData.email) {
+                        const res = `✅ *DATOS DE TU KEY*\n\n` +
+                                    `👤 *User:* ${data.nombreRoblox}\n` +
+                                    `📅 *Expira:* ${data.expira}\n` +
+                                    `📱 *Device:* ${data.dispositivo}\n` +
+                                    `💰 *Costo:* ${data.costo}`;
+                        await sock.sendMessage(from, { text: res });
+                    } else {
+                        await sock.sendMessage(from, { text: '❌ *Error:* La key no existe o no te pertenece.' });
+                    }
+                    delete tempState[from];
+                });
+            }
+        }
+
         if (text === '1') {
             await sock.sendMessage(from, { text: '⏳ *Analizando integridad de la base de datos...*' });
             const statusRef = db.ref('/');
@@ -203,73 +295,6 @@ async function iniciarBot() {
             if (!userData) return await sock.sendMessage(from, { text: '❌ Debes iniciar sesión con /darkmatter primero.' });
             tempState[from] = { step: 'CONSULTA_KEY' };
             return await sock.sendMessage(from, { text: '🔍 Ingresa la *Key* que deseas consultar:' });
-        }
-
-        const step = tempState[from];
-        if (step) {
-            // LÓGICA DE CONFIRMACIÓN DE CORREO POR NÚMERO
-            if (step.step === 'CONFIRM_EMAIL') {
-                if (text === '1') {
-                    step.step = 'LOGIN_PASS';
-                    await sock.sendMessage(from, { text: `🔐 Perfecto. Ingresa la *Contraseña* para la cuenta: *${step.email}*` });
-                } else {
-                    step.step = 'LOGIN_EMAIL';
-                    await sock.sendMessage(from, { text: '📧 Entendido. Ingresa el *Correo* que deseas usar:' });
-                }
-            }
-            // LÓGICA DE LOGIN PRIMERIZO
-            else if (step.step === 'LOGIN_EMAIL') {
-                step.email = text.toLowerCase();
-                step.step = 'LOGIN_PASS';
-                await sock.sendMessage(from, { text: '🔐 Ahora ingresa tu *Contraseña* de DarkMatter:' });
-            }
-            else if (step.step === 'LOGIN_PASS') {
-                const pass = text;
-                await sock.sendMessage(from, { text: '⏳ Validando credenciales...' });
-                
-                const authRef = db.ref('usuarios_auth');
-                authRef.once('value', async (snap) => {
-                    const users = snap.val() || {};
-                    let userFound = null;
-                    
-                    for (let u in users) {
-                        const emailLimpio = u.replace(/_/g, '.');
-                        if (emailLimpio === step.email && users[u].password === pass) {
-                            userFound = users[u];
-                            break;
-                        }
-                    }
-
-                    if (userFound) {
-                        await sessionRef.set({ email: step.email, pass: pass });
-                        await sock.sendMessage(from, { text: '✅ *Login Exitoso*\n\nSesión vinculada a tu número. Escribe /darkmatter para ver el menú.' });
-                    } else {
-                        await sock.sendMessage(from, { text: '❌ Correo o contraseña incorrectos.' });
-                    }
-                    delete tempState[from];
-                });
-            }
-            // CONSULTA DE KEY CON DATOS AUTOMÁTICOS
-            else if (step.step === 'CONSULTA_KEY') {
-                const keyInput = text;
-                await sock.sendMessage(from, { text: '⏳ Verificando propiedad de la key...' });
-
-                const ref = db.ref(`keys/${keyInput}`);
-                ref.once('value', async (snapshot) => {
-                    const data = snapshot.val();
-                    if (data && data.correo && data.correo.toLowerCase() === userData.email) {
-                        const res = `✅ *DATOS DE TU KEY*\n\n` +
-                                    `👤 *User:* ${data.nombreRoblox}\n` +
-                                    `📅 *Expira:* ${data.expira}\n` +
-                                    `📱 *Device:* ${data.dispositivo}\n` +
-                                    `💰 *Costo:* ${data.costo}`;
-                        await sock.sendMessage(from, { text: res });
-                    } else {
-                        await sock.sendMessage(from, { text: '❌ *Error:* La key no existe o no te pertenece.' });
-                    }
-                    delete tempState[from];
-                });
-            }
         }
     });
 }
