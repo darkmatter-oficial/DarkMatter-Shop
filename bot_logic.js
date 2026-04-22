@@ -99,6 +99,7 @@ async function iniciarBot() {
         }
 
         // --- LÓGICA DE DETECCIÓN DE MENSAJES SIN COMANDO ---
+        // Si no hay estado previo y no es el comando, preguntamos qué desea hacer
         if (!tempState[from] && text.toLowerCase() !== '/darkmatter') {
             const bienvenidaMsg = `🌌 *DARKMATTER ASSISTANT* 🌌\n\n` +
                                  `¡Hola! He detectado que estás intentando comunicarte.\n\n` +
@@ -112,16 +113,23 @@ async function iniciarBot() {
 
         const step = tempState[from];
         if (step) {
+            // Si el usuario ya está en modo privado, ignoramos sus mensajes (no respondemos nada más)
+            // Esto permite que hable con la persona sin interferencia del bot.
+            if (step.step === 'PRIVATE_MODE') {
+                return; 
+            }
+
             // Lógica de elección entre Bot o Humano
             if (step.step === 'ASK_BOT_OR_HUMAN') {
                 if (text.toLowerCase() === 'si' || text.toLowerCase() === 'sí') {
-                    delete tempState[from];
+                    delete tempState[from]; // Al elegir sí, limpiamos para que pueda poner el comando
                     return await sock.sendMessage(from, { text: `✅ *MODO BOT ACTIVADO*\n\nPara acceder a nuestros servicios y soporte automático, por favor escribe el comando:\n\n👉 */DarkMatter*` });
                 } else if (text.toLowerCase() === 'no') {
-                    delete tempState[from];
-                    return await sock.sendMessage(from, { text: `👤 *MODO PRIVADO ACTIVADO*\n\nAhora estás en modo de chat directo con el dueño del número. Si en algún momento deseas consultar la tienda o tus productos, solo escribe */DarkMatter* para activar el bot.` });
+                    // Marcamos el estado como modo privado para que no vuelva a preguntar en esta sesión
+                    tempState[from] = { step: 'PRIVATE_MODE' };
+                    return await sock.sendMessage(from, { text: `👤 *MODO PRIVADO ACTIVADO*\n\nAhora estás en modo de chat directo con el dueño del número. El bot no volverá a interrumpirte.\n\nSi en algún momento deseas consultar la tienda o tus productos, solo escribe */DarkMatter* para reactivar el servicio.` });
                 } else {
-                    return await sock.sendMessage(from, { text: `⚠️ *POR FAVOR RESPONDE*\n\n¿Quieres hablar con la persona que dirige este número o deseas usar el bot de la tienda DarkMatter?\n\nResponde *SÍ* (Bot) o *NO* (Persona).` });
+                    return await sock.sendMessage(from, { text: `⚠️ *POR FAVOR RESPONDE*\n\n¿Quieres hablar con la persona que dirige este número o deseas usar el bot de la tienda DarkMatter?\n\nResponde con un mensaje que diga *SÍ* (Bot) o *NO* (Persona).` });
                 }
             }
             
