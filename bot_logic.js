@@ -16,7 +16,7 @@ let tempState = {};
 const adminNumber = "573001125554"; // Tu número configurado
 
 // ─── CONFIGURACIÓN GROQ AI ───────────────────────────────────────────────────
-const GROQ_API_KEY = "TU_API_KEY_DE_GROQ_AQUÍ"; // Reemplaza con tu API key real de Groq
+const GROQ_API_KEY = "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"; // Reemplaza con tu API key real de Groq
 const conversationHistory = {}; // Historial de conversaciones por chat
 
 // Función principal para llamar a la IA de Groq
