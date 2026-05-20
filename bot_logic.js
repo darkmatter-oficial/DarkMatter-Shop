@@ -12,8 +12,66 @@ if (!admin.apps.length) {
 }
 const db = admin.database();
 
-let tempState = {}; 
+let tempState = {};
 const adminNumber = "573001125554"; // Tu número configurado
+
+// ─── CONFIGURACIÓN GROQ AI ───────────────────────────────────────────────────
+const GROQ_API_KEY = "TU_API_KEY_DE_GROQ_AQUÍ"; // Reemplaza con tu API key real de Groq
+const conversationHistory = {}; // Historial de conversaciones por chat
+
+// Función principal para llamar a la IA de Groq
+async function callGroqAI(from, userMessage) {
+    if (!conversationHistory[from]) {
+        conversationHistory[from] = [];
+    }
+
+    conversationHistory[from].push({
+        role: "user",
+        content: userMessage
+    });
+
+    // Mantener el historial limitado a los últimos 10 mensajes para no sobrecargar
+    if (conversationHistory[from].length > 10) {
+        conversationHistory[from] = conversationHistory[from].slice(-10);
+    }
+
+    const response = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+        method: "POST",
+        headers: {
+            "Authorization": `Bearer ${GROQ_API_KEY}`,
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+            model: "llama3-8b-8192",
+            messages: [
+                {
+                    role: "system",
+                    content: "Eres Sergio Charris, un asistente inteligente que responde por WhatsApp. Responde siempre en español, de forma natural, amigable y útil. Sé conciso pero completo. Ayuda al usuario con cualquier pregunta o tema que tenga."
+                },
+                ...conversationHistory[from]
+            ],
+            max_tokens: 1024,
+            temperature: 0.7
+        })
+    });
+
+    const data = await response.json();
+    const assistantMessage = data.choices?.[0]?.message?.content || "Lo siento, no pude generar una respuesta en este momento. Intenta de nuevo.";
+
+    conversationHistory[from].push({
+        role: "assistant",
+        content: assistantMessage
+    });
+
+    return assistantMessage;
+}
+
+// Función para detectar si el mensaje menciona a Sergio, Charris o variaciones
+function mencionaAlAdmin(text) {
+    const variaciones = /sergio|charris|serg|charri|charis|sergi|charriz|segio|charis/i;
+    return variaciones.test(text);
+}
+// ─────────────────────────────────────────────────────────────────────────────
 
 async function iniciarBot() {
     const { state, saveCreds } = await useMultiFileAuthState('sesion_bot');
@@ -54,9 +112,29 @@ async function iniciarBot() {
         // Si el mensaje viene de tu propio número, el bot no debe responder para evitar bucles
         if (from.includes(adminNumber)) return;
 
-        const safeId = from.replace(/[^a-zA-Z0-9]/g, '');
         const text = (msg.message.conversation || msg.message.extendedTextMessage?.text || "").trim();
         const textLow = text.toLowerCase();
+
+        // ─── DETECCIÓN DE GRUPOS VS PRIVADOS ─────────────────────────────────────
+        const isGroup = from.endsWith('@g.us');
+
+        if (isGroup) {
+            // En grupos: solo responder si mencionan a Sergio, Charris o variaciones
+            if (!mencionaAlAdmin(text)) return;
+
+            try {
+                console.log(`[GRUPO] Mención detectada en ${from}: "${text}"`);
+                const respuestaGrupo = await callGroqAI(from, text);
+                await sock.sendMessage(from, { text: respuestaGrupo });
+            } catch (error) {
+                console.error("Error Groq en grupo:", error);
+            }
+            return; // No continuar con la lógica de privados
+        }
+        // ─────────────────────────────────────────────────────────────────────────
+
+        // Desde aquí solo se procesan CHATS PRIVADOS
+        const safeId = from.replace(/[^a-zA-Z0-9]/g, '');
 
         // VALIDACIÓN DE SESIÓN PERSISTENTE
         const sessionRef = db.ref(`sesiones_whatsapp/${safeId}`);
@@ -106,7 +184,7 @@ async function iniciarBot() {
 
         if (step && step.step === 'PRIVATE_MODE') return;
 
-        // Si no hay comando y no hay estado activo, preguntamos
+        // Si no hay comando y no hay estado activo, la IA de Groq responde directamente
         if (!step && textLow !== '/darkmatter') {
             const bienvenidaMsg = `🌌 *DARKMATTER ASSISTANT* 🌌\n\n` +
                                  `¿Deseas usar el *Bot Automático* o hablar con la *Persona* encargada?\n\n` +
@@ -114,7 +192,16 @@ async function iniciarBot() {
                                  `🔴 Responde *NO* para chat privado.`;
             
             tempState[from] = { step: 'ASK_BOT_OR_HUMAN' };
-            return await sock.sendMessage(from, { text: bienvenidaMsg });
+            await sock.sendMessage(from, { text: bienvenidaMsg });
+
+            // ── GROQ responde también de forma inteligente al mensaje inicial ──
+            try {
+                const respuestaIA = await callGroqAI(from, text);
+                await sock.sendMessage(from, { text: respuestaIA });
+            } catch (error) {
+                console.error("Error Groq en bienvenida:", error);
+            }
+            return;
         }
 
         if (step) {
@@ -126,7 +213,15 @@ async function iniciarBot() {
                     tempState[from] = { step: 'PRIVATE_MODE' };
                     return await sock.sendMessage(from, { text: `👤 *MODO PRIVADO ACTIVADO*\n\nEl bot se ha desactivado para este chat. Escribe */DarkMatter* si lo necesitas de nuevo.` });
                 } else {
-                    return await sock.sendMessage(from, { text: `⚠️ Responde *SÍ* o *NO*.` });
+                    // Si no responde SÍ/NO, la IA de Groq interpreta y responde
+                    try {
+                        const respuestaIA = await callGroqAI(from, text);
+                        await sock.sendMessage(from, { text: respuestaIA });
+                    } catch (error) {
+                        console.error("Error Groq en ASK_BOT_OR_HUMAN:", error);
+                        await sock.sendMessage(from, { text: `⚠️ Responde *SÍ* o *NO*.` });
+                    }
+                    return;
                 }
             }
             
@@ -197,14 +292,17 @@ async function iniciarBot() {
                 const msgS = `📊 *SISTEMA:* ${v.Estado || 'Activo'}\n📡 *Versión:* 4.5 Stable`;
                 await sock.sendMessage(from, { text: msgS });
             });
+            return;
         }
         
         if (text === '3') {
             await sock.sendMessage(from, { text: `🛠 *SOPORTE:* wa.me/${adminNumber}` });
+            return;
         }
 
         if (text === '4') {
             await sock.sendMessage(from, { text: `🎁 *KEY GRATIS:* https://linkvertise.com/5116981/FIGf3YGXqNhz` });
+            return;
         }
 
         if (text === '5') {
@@ -212,13 +310,26 @@ async function iniciarBot() {
                 await sessionRef.remove();
                 await sock.sendMessage(from, { text: '🚪 Sesión cerrada.' });
             }
+            return;
         }
 
         if (text === '2') {
             if (!userData) return await sock.sendMessage(from, { text: '❌ Usa /darkmatter' });
             tempState[from] = { step: 'CONSULTA_KEY' };
             await sock.sendMessage(from, { text: '🔍 Ingresa la Key:' });
+            return;
         }
+
+        // ─── FALLBACK FINAL: Si ningún comando coincide, Groq AI responde ────────
+        try {
+            console.log(`[PRIVADO] Mensaje sin comando detectado de ${from}: "${text}"`);
+            const respuestaFinal = await callGroqAI(from, text);
+            await sock.sendMessage(from, { text: respuestaFinal });
+        } catch (error) {
+            console.error("Error Groq en fallback final:", error);
+            await sock.sendMessage(from, { text: "Ocurrió un error procesando tu mensaje. Intenta de nuevo." });
+        }
+        // ─────────────────────────────────────────────────────────────────────────
     });
 }
 iniciarBot();
