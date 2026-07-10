@@ -23,15 +23,33 @@ body{
 
 .card{
     width:100%;
-    max-width:420px;
+    max-width:430px;
     background:linear-gradient(160deg,#22093a,#170428);
     border:1px solid #a855f7;
-    border-radius:24px;
-    padding:40px 32px;
+    border-radius:26px;
+    padding:42px 34px;
     text-align:center;
     color:white;
-    box-shadow:0 0 60px rgba(139,92,246,0.35), inset 0 0 30px rgba(168,85,247,0.05);
+    box-shadow:0 0 70px rgba(139,92,246,0.35), inset 0 0 30px rgba(168,85,247,0.06);
     animation:fadeIn 0.5s ease;
+    position:relative;
+    overflow:hidden;
+}
+
+.card::before{
+    content:"";
+    position:absolute;
+    top:-60%;
+    left:-60%;
+    width:220%;
+    height:220%;
+    background:conic-gradient(from 0deg, transparent, rgba(168,85,247,0.08), transparent 30%);
+    animation:girar 8s linear infinite;
+    pointer-events:none;
+}
+
+@keyframes girar{
+    to{transform:rotate(360deg);}
 }
 
 @keyframes fadeIn{
@@ -41,23 +59,34 @@ body{
 
 h1{
     color:#d8b4fe;
-    letter-spacing:5px;
+    letter-spacing:6px;
     font-size:32px;
-    margin:0 0 8px 0;
+    margin:0 0 6px 0;
     text-shadow:0 0 20px #a855f7;
+    position:relative;
 }
 
 .subtitulo{
     color:#8b5cf6;
-    font-size:15px;
-    margin-bottom:32px;
-    letter-spacing:1px;
+    font-size:14px;
+    margin-bottom:8px;
+    letter-spacing:1.5px;
+    position:relative;
+}
+
+.ip-info{
+    color:#6d28d9;
+    font-size:11px;
+    margin-bottom:30px;
+    letter-spacing:0.5px;
+    position:relative;
 }
 
 .botones{
     display:flex;
     flex-direction:column;
-    gap:16px;
+    gap:14px;
+    position:relative;
 }
 
 .btn{
@@ -66,11 +95,15 @@ h1{
     color:#e9d5ff;
     padding:18px;
     border-radius:14px;
-    font-size:17px;
+    font-size:16px;
     font-weight:600;
     letter-spacing:1px;
     cursor:pointer;
     transition:all 0.25s ease;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:10px;
 }
 
 .btn:hover{
@@ -94,14 +127,15 @@ h1{
     background:#170428;
     border:1px solid #7c3aed;
     border-radius:16px;
-    padding:24px 18px;
+    padding:26px 18px;
     margin-top:6px;
     display:none;
+    position:relative;
 }
 
 .fase-titulo{
     color:#c084fc;
-    font-size:15px;
+    font-size:14px;
     letter-spacing:1px;
     margin-bottom:4px;
 }
@@ -115,7 +149,7 @@ h1{
 
 .fase-nota{
     color:#a855f7;
-    font-size:13px;
+    font-size:12.5px;
     margin-bottom:18px;
     letter-spacing:0.5px;
 }
@@ -146,21 +180,23 @@ h1{
     border-radius:16px;
     padding:22px;
     margin-top:26px;
-    font-size:24px;
+    font-size:23px;
     font-weight:bold;
     color:#d8b4fe;
     letter-spacing:1px;
     display:none;
     word-break:break-all;
     box-shadow:inset 0 0 15px rgba(168,85,247,0.2);
+    position:relative;
 }
 
 .expira{
     margin-top:16px;
     color:#facc15;
-    font-size:15px;
+    font-size:14px;
     display:none;
     line-height:1.6;
+    position:relative;
 }
 
 .expira b{
@@ -169,10 +205,11 @@ h1{
 
 .estado{
     margin-top:18px;
-    font-size:15px;
+    font-size:14px;
     font-weight:600;
     color:#7ee787;
     min-height:20px;
+    position:relative;
 }
 
 .estado.error{
@@ -184,10 +221,11 @@ h1{
     background:none;
     border:none;
     color:#a855f7;
-    font-size:14px;
+    font-size:13px;
     text-decoration:underline;
     cursor:pointer;
     display:none;
+    position:relative;
 }
 
 .btn-volver:hover{
@@ -201,14 +239,59 @@ h1{
     color:#e9d5ff;
     padding:10px 18px;
     border-radius:10px;
-    font-size:14px;
+    font-size:13px;
     cursor:pointer;
     display:none;
+    position:relative;
 }
 
 .btn-copiar:hover{
     background:#a855f7;
     color:#170428;
+}
+
+.bloqueado{
+    display:none;
+    position:relative;
+}
+
+.bloqueado-icono{
+    font-size:38px;
+    margin-bottom:10px;
+}
+
+.bloqueado-titulo{
+    color:#f87171;
+    font-size:16px;
+    font-weight:700;
+    letter-spacing:1px;
+    margin-bottom:6px;
+}
+
+.bloqueado-texto{
+    color:#c4b5fd;
+    font-size:13px;
+    margin-bottom:22px;
+    line-height:1.5;
+}
+
+.contador{
+    background:#170428;
+    border:1px solid #f87171;
+    border-radius:16px;
+    padding:20px;
+    font-size:30px;
+    font-weight:bold;
+    letter-spacing:2px;
+    color:#fca5a5;
+    box-shadow:inset 0 0 15px rgba(248,113,113,0.15);
+}
+
+.contador-label{
+    color:#8b5cf6;
+    font-size:11px;
+    margin-top:10px;
+    letter-spacing:1px;
 }
 
 .spinner{
@@ -219,7 +302,6 @@ h1{
     border-top:2px solid transparent;
     border-radius:50%;
     animation:spin 0.7s linear infinite;
-    margin-right:8px;
     vertical-align:middle;
 }
 
@@ -233,11 +315,20 @@ h1{
 <div class="card">
 <h1>DARKMATTER</h1>
 <div class="subtitulo">GENERADOR DE KEYS</div>
+<div class="ip-info" id="ipInfo">Verificando conexión...</div>
 
 <div class="botones" id="botones">
-<button class="btn" data-horas="2">KEY 2 HORAS</button>
-<button class="btn" data-horas="5">KEY 5 HORAS</button>
-<button class="btn" data-horas="8">KEY 8 HORAS</button>
+<button class="btn" data-horas="2">⏱ KEY 2 HORAS</button>
+<button class="btn" data-horas="5">⏱ KEY 5 HORAS</button>
+<button class="btn" data-horas="8">⏱ KEY 8 HORAS</button>
+</div>
+
+<div class="bloqueado" id="bloqueado">
+<div class="bloqueado-icono">🔒</div>
+<div class="bloqueado-titulo">TODAVÍA NO PUEDES GENERAR</div>
+<div class="bloqueado-texto">Ya generaste una key. Podrás pedir otra (de cualquier duración) cuando termine el tiempo restante:</div>
+<div class="contador" id="contador">00:00:00</div>
+<div class="contador-label">HORAS : MINUTOS : SEGUNDOS</div>
 </div>
 
 <div class="fase-info" id="faseInfo">
@@ -256,7 +347,7 @@ h1{
 
 <button class="btn-copiar" id="copiar">📋 Copiar key</button>
 
-<button class="btn-volver" id="volver">← Generar otra key</button>
+<button class="btn-volver" id="volver">← Volver</button>
 
 </div>
 
@@ -306,8 +397,9 @@ return texto;
 
 }
 
-function formatearFecha(fecha){
+function formatearFecha(timestamp){
 
+const fecha=new Date(timestamp);
 const dias=["Domingo","Lunes","Martes","Miércoles","Jueves","Viernes","Sábado"];
 const diaSemana=dias[fecha.getDay()];
 const dia=String(fecha.getDate()).padStart(2,"0");
@@ -323,6 +415,43 @@ horas=String(horas).padStart(2,"0");
 return `${diaSemana} ${dia}/${mes}/${anio} - ${horas}:${minutos}:${segundos} ${ampm}`;
 
 }
+
+function formatearContador(ms){
+
+if(ms<0) ms=0;
+const totalSeg=Math.floor(ms/1000);
+const h=String(Math.floor(totalSeg/3600)).padStart(2,"0");
+const m=String(Math.floor((totalSeg%3600)/60)).padStart(2,"0");
+const s=String(totalSeg%60).padStart(2,"0");
+return h+":"+m+":"+s;
+
+}
+
+// --- IP del usuario ---
+
+async function obtenerIP(){
+
+try{
+
+const res=await fetch("https://api.ipify.org?format=json");
+const data=await res.json();
+return data.ip;
+
+}catch(e){
+
+return null;
+
+}
+
+}
+
+function sanitizarIP(ip){
+
+return ip.replace(/[.#$\[\]]/g,"_");
+
+}
+
+// --- Firma del estado (evita que editen fase/done/ip a mano en la URL) ---
 
 async function sha256Hex(texto){
 
@@ -361,6 +490,8 @@ return null;
 
 }
 
+// --- Progreso de fases (fuente de verdad en Firebase, no en la URL) ---
+
 async function leerProgreso(key){
 
 const snap=await get(ref(db,"KEYS/"+key+"/progreso"));
@@ -374,7 +505,25 @@ await set(ref(db,"KEYS/"+key+"/progreso"), { fase, done: !!done });
 
 }
 
+// --- Bloqueo por IP (cooldown entre keys) ---
+
+async function leerBloqueo(ipSafe){
+
+const snap=await get(ref(db,"IPS/"+ipSafe));
+return snap.exists() ? snap.val() : null;
+
+}
+
+async function guardarBloqueo(ipSafe, bloqueadoHasta){
+
+await set(ref(db,"IPS/"+ipSafe), { bloqueadoHasta });
+
+}
+
 const botones=document.getElementById("botones");
+const ipInfoDiv=document.getElementById("ipInfo");
+const bloqueadoDiv=document.getElementById("bloqueado");
+const contadorDiv=document.getElementById("contador");
 const faseInfoDiv=document.getElementById("faseInfo");
 const faseProgresoDiv=document.getElementById("faseProgreso");
 const dotsDiv=document.getElementById("dots");
@@ -386,10 +535,14 @@ const volverBtn=document.getElementById("volver");
 const copiarBtn=document.getElementById("copiar");
 
 let estadoActual=null;
+let ipActual=null;
+let ipSafeActual=null;
+let intervaloContador=null;
 
 function ocultarTodo(){
 
 botones.style.display="none";
+bloqueadoDiv.style.display="none";
 faseInfoDiv.style.display="none";
 keyDiv.style.display="none";
 expiraDiv.style.display="none";
@@ -397,6 +550,11 @@ volverBtn.style.display="none";
 copiarBtn.style.display="none";
 estadoDiv.innerText="";
 estadoDiv.classList.remove("error");
+
+if(intervaloContador){
+clearInterval(intervaloContador);
+intervaloContador=null;
+}
 
 }
 
@@ -406,6 +564,40 @@ ocultarTodo();
 botones.style.display="flex";
 estadoDiv.innerText=msg;
 estadoDiv.classList.add("error");
+
+}
+
+function mostrarBotones(){
+
+ocultarTodo();
+botones.style.display="flex";
+
+}
+
+function mostrarBloqueado(bloqueadoHasta){
+
+ocultarTodo();
+bloqueadoDiv.style.display="block";
+
+function actualizar(){
+
+const restante=bloqueadoHasta-Date.now();
+
+if(restante<=0){
+
+clearInterval(intervaloContador);
+intervaloContador=null;
+mostrarBotones();
+return;
+
+}
+
+contadorDiv.innerText=formatearContador(restante);
+
+}
+
+actualizar();
+intervaloContador=setInterval(actualizar,1000);
 
 }
 
@@ -434,7 +626,7 @@ btnFase.innerText="INICIAR FASE "+fase;
 
 }
 
-function mostrarKey(key, expiraTexto){
+function mostrarKey(key, expiraTimestamp){
 
 ocultarTodo();
 keyDiv.style.display="block";
@@ -443,26 +635,26 @@ volverBtn.style.display="inline-block";
 copiarBtn.style.display="inline-block";
 
 keyDiv.innerText=key;
-expiraDiv.innerHTML="Expira el:<br><b>"+expiraTexto+"</b>";
+expiraDiv.innerHTML="Expira el:<br><b>"+formatearFecha(expiraTimestamp)+"</b>";
 estadoDiv.innerText="✔ Key lista para usar";
 
 }
 
-function reiniciar(){
+async function reiniciar(){
 
 const url=new URL(window.location.href);
 url.search="";
 window.history.replaceState({}, "", url.toString());
 
 estadoActual=null;
-ocultarTodo();
-botones.style.display="flex";
 document.querySelectorAll(".botones .btn").forEach(b=>{
 b.disabled=false;
-b.innerText=b.dataset.horas+" HORAS";
+b.innerHTML="⏱ KEY "+b.dataset.horas+" HORAS";
 });
 keyDiv.innerText="";
 expiraDiv.innerHTML="";
+
+await revisarEstadoInicial();
 
 }
 
@@ -484,10 +676,8 @@ return texto.trim();
 
 }
 
-// Construye la cadena de links de cuty.io de atrás hacia adelante:
-// primero acorta la URL final (tu página), luego envuelve ese resultado
-// otra vez, y así hasta tener 'numRondas' saltos seguidos de cuty.io.
-// Devuelve el PRIMER link al que hay que mandar al usuario.
+// Construye la cadena de links de cuty.io de atrás hacia adelante para que
+// el usuario pase por RONDAS_POR_FASE anuncios seguidos sin volver a tu página.
 async function construirCadenaCuty(numRondas, urlFinal){
 
 let urlActual=urlFinal;
@@ -504,16 +694,11 @@ async function irACutyFase(estadoBase, faseSiguiente, total, done){
 
 const nuevoEstado={ ...estadoBase, fase: done ? estadoBase.fase : faseSiguiente, done: !!done };
 
-// El progreso real se guarda en Firebase ANTES de generar los links,
-// así el token que vuelva solo es válido si coincide con lo registrado.
 await guardarProgreso(nuevoEstado.key, nuevoEstado.fase, nuevoEstado.done);
 
 const token=await crearToken(nuevoEstado);
 const urlDestinoFinal=PAGINA_BASE+"?t="+encodeURIComponent(token);
 
-// Se generan los 3 (RONDAS_POR_FASE) saltos de cuty.io encadenados.
-// El usuario solo ve el primero; de ahí cuty.io lo lleva directo
-// al siguiente, y al siguiente, sin volver a tu página hasta el final.
 const primerLink=await construirCadenaCuty(RONDAS_POR_FASE, urlDestinoFinal);
 
 window.location.href=primerLink;
@@ -524,6 +709,22 @@ document.querySelectorAll(".botones .btn").forEach(btn=>{
 
 btn.addEventListener("click", async ()=>{
 
+if(!ipActual){
+estadoDiv.innerText="✘ No se pudo verificar tu conexión, recarga la página";
+estadoDiv.classList.add("error");
+return;
+}
+
+// Doble chequeo defensivo: revalida el bloqueo justo antes de generar
+const bloqueo=await leerBloqueo(ipSafeActual);
+
+if(bloqueo && bloqueo.bloqueadoHasta>Date.now()){
+
+mostrarBloqueado(bloqueo.bloqueadoHasta);
+return;
+
+}
+
 const horas=parseInt(btn.dataset.horas);
 const total=FASES_POR_HORA[horas];
 
@@ -531,22 +732,22 @@ document.querySelectorAll(".botones .btn").forEach(b=> b.disabled=true );
 btn.innerHTML="<span class='spinner'></span> Preparando...";
 
 const key=generarKey();
-const ahora=new Date();
-const fechaExpira=new Date(ahora.getTime() + (horas*60*60*1000));
-const expiraTexto=formatearFecha(fechaExpira);
-const expiraTimestamp=fechaExpira.getTime();
+const expiraTimestamp=Date.now()+(horas*60*60*1000);
 
 try{
 
+// La key solo guarda tu IP y el timestamp exacto de expiración
 await set(ref(db,"KEYS/"+key),{
-duracionHoras:horas,
-expira:expiraTexto,
-expiraTimestamp:expiraTimestamp
+ip: ipActual,
+expira: expiraTimestamp
 });
 
 await guardarProgreso(key,1,false);
 
-estadoActual={ key, horas, expira:expiraTexto, fase:1, done:false };
+// El bloqueo de tu IP dura lo mismo que la duración de la key elegida
+await guardarBloqueo(ipSafeActual, expiraTimestamp);
+
+estadoActual={ key, horas, expira:expiraTimestamp, ip:ipActual, fase:1, done:false };
 
 const url=new URL(window.location.href);
 url.search="";
@@ -558,9 +759,10 @@ mostrarPantallaFase(1,total);
 
 }catch(e){
 
-btn.innerHTML=btn.dataset.horas+" HORAS";
+btn.innerHTML="⏱ KEY "+btn.dataset.horas+" HORAS";
 document.querySelectorAll(".botones .btn").forEach(b=> b.disabled=false );
 estadoDiv.innerText="✘ Error al generar la key";
+estadoDiv.classList.add("error");
 
 }
 
@@ -598,24 +800,31 @@ await irACutyFase(estadoActual, estadoActual.fase+1, total, false);
 btnFase.disabled=false;
 btnFase.innerText="INICIAR FASE "+estadoActual.fase;
 estadoDiv.innerText="✘ Error al continuar, inténtalo de nuevo";
+estadoDiv.classList.add("error");
 
 }
 
 });
 
-window.addEventListener("DOMContentLoaded", async ()=>{
+// Revisa token en la URL (continuación de fases) o, si no hay token,
+// revisa si la IP está bloqueada para decidir qué mostrar.
+async function revisarEstadoInicial(){
 
 const params=new URLSearchParams(window.location.search);
 const token=params.get("t");
 
-if(!token){
-return;
-}
+if(token){
 
 const estado=await leerToken(token);
 
 if(!estado){
 mostrarError("Enlace inválido o alterado. Genera una key nuevamente.");
+return;
+}
+
+// La IP actual debe coincidir con la que generó la key
+if(estado.ip!==ipActual){
+mostrarError("Este enlace fue generado desde otra conexión y no es válido aquí.");
 return;
 }
 
@@ -642,6 +851,42 @@ mostrarKey(estado.key, estado.expira);
 mostrarPantallaFase(estado.fase, total);
 
 }
+
+return;
+
+}
+
+// Sin token: revisamos si la IP tiene un bloqueo activo
+const bloqueo=await leerBloqueo(ipSafeActual);
+
+if(bloqueo && bloqueo.bloqueadoHasta>Date.now()){
+
+mostrarBloqueado(bloqueo.bloqueadoHasta);
+
+}else{
+
+mostrarBotones();
+
+}
+
+}
+
+window.addEventListener("DOMContentLoaded", async ()=>{
+
+ipActual=await obtenerIP();
+
+if(!ipActual){
+
+ipInfoDiv.innerText="⚠ No se pudo verificar tu IP";
+mostrarError("No se pudo verificar tu conexión. Recarga la página e inténtalo de nuevo.");
+return;
+
+}
+
+ipSafeActual=sanitizarIP(ipActual);
+ipInfoDiv.innerText="Conexión verificada";
+
+await revisarEstadoInicial();
 
 });
 
