@@ -90,6 +90,7 @@ h1{
 }
 
 .btn{
+    width:100%;
     background:#2b0a47;
     border:1px solid #7c3aed;
     color:#e9d5ff;
@@ -233,11 +234,12 @@ h1{
 }
 
 .btn-copiar{
+    width:100%;
     margin-top:16px;
     background:#3b0764;
     border:1px solid #a855f7;
     color:#e9d5ff;
-    padding:10px 18px;
+    padding:12px 18px;
     border-radius:10px;
     font-size:13px;
     cursor:pointer;
@@ -326,7 +328,7 @@ h1{
 <div class="bloqueado" id="bloqueado">
 <div class="bloqueado-icono">🔒</div>
 <div class="bloqueado-titulo">TODAVÍA NO PUEDES GENERAR</div>
-<div class="bloqueado-texto">Ya generaste una key. Podrás pedir otra (de cualquier duración) cuando termine el tiempo restante:</div>
+<div class="bloqueado-texto">Ya tienes una key activa. Podrás pedir otra (de cualquier duración) cuando termine el tiempo restante:</div>
 <div class="contador" id="contador">00:00:00</div>
 <div class="contador-label">HORAS : MINUTOS : SEGUNDOS</div>
 </div>
@@ -359,7 +361,8 @@ import {
 getDatabase,
 ref,
 set,
-get
+get,
+update
 }
 from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
@@ -380,11 +383,15 @@ const CUTY_API_KEY="0a4fb7e2e5e7b96961905bbc5";
 
 const PAGINA_BASE="https://darkmatter-oficial.github.io/DarkMatter-Shop/";
 
-// Sal usada para firmar el estado del flujo (evita editar la URL a mano)
-const SAL_FIRMA="dm-2026-cambia-esta-sal-por-una-tuya";
+// Sal usada para firmar y hashear (cámbiala por una tuya, larga y única)
+const SAL_FIRMA="dm-2026-cambia-esta-sal-por-una-tuya-larga-y-unica";
 
 const FASES_POR_HORA={ 2:1, 5:2, 8:3 };
 const RONDAS_POR_FASE=3;
+
+// Un token de fase (aún no finalizado) deja de ser válido pasado este tiempo,
+// así nadie puede guardar un link a mitad del proceso y usarlo días después.
+const TOKEN_MAX_EDAD_MS=20*60*1000; // 20 minutos
 
 function generarKey(){
 
@@ -445,14 +452,6 @@ return null;
 
 }
 
-function sanitizarIP(ip){
-
-return ip.replace(/[.#$\[\]]/g,"_");
-
-}
-
-// --- Firma del estado (evita que editen fase/done/ip a mano en la URL) ---
-
 async function sha256Hex(texto){
 
 const buffer=await crypto.subtle.digest("SHA-256", new TextEncoder().encode(texto));
@@ -460,9 +459,19 @@ return Array.from(new Uint8Array(buffer)).map(b=>b.toString(16).padStart(2,"0"))
 
 }
 
+// La IP nunca se guarda en texto plano: se guarda un hash con sal,
+// tanto en Firebase como dentro del token.
+async function hashIP(ip){
+
+return await sha256Hex("ip:"+ip+":"+SAL_FIRMA);
+
+}
+
+// --- Firma y validez temporal del token de estado ---
+
 async function crearToken(estado){
 
-const payload=JSON.stringify(estado);
+const payload=JSON.stringify({ ...estado, iat: Date.now() });
 const firma=await sha256Hex(payload+SAL_FIRMA);
 return btoa(unescape(encodeURIComponent(payload)))+"."+firma;
 
@@ -480,7 +489,26 @@ if(firma!==firmaEsperada){
 return null;
 }
 
-return JSON.parse(payload);
+const estado=JSON.parse(payload);
+
+// Los tokens de key ya finalizada (done) no vencen, porque solo muestran
+// una key que ya existe. Los tokens de fase intermedia sí vencen rápido.
+if(!estado.done){
+
+const edad=Date.now()-estado.iat;
+
+if(edad>TOKEN_MAX_EDAD_MS || edad<0){
+return null;
+}
+
+}
+
+// Validación estricta de forma: solo duraciones permitidas
+if(!FASES_POR_HORA[estado.horas]){
+return null;
+}
+
+return estado;
 
 }catch(e){
 
@@ -505,18 +533,47 @@ await set(ref(db,"KEYS/"+key+"/progreso"), { fase, done: !!done });
 
 }
 
-// --- Bloqueo por IP (cooldown entre keys) ---
+// Finaliza la key SOLO cuando se completaron todas las fases y rondas.
+// Es idempotente: si ya estaba finalizada, no vuelve a escribir nada
+// (así no se puede "recargar" el bloqueo revisitando el mismo link).
+async function finalizarKeySiNecesario(key,horas,ipHash){
 
-async function leerBloqueo(ipSafe){
+const yaSnap=await get(ref(db,"KEYS/"+key+"/finalizado"));
 
-const snap=await get(ref(db,"IPS/"+ipSafe));
+if(yaSnap.exists() && yaSnap.val()===true){
+
+const expiraSnap=await get(ref(db,"KEYS/"+key+"/expira"));
+return expiraSnap.val();
+
+}
+
+const expiraTimestamp=Date.now()+(horas*60*60*1000);
+
+await update(ref(db,"KEYS/"+key), {
+ipHash,
+expira: expiraTimestamp,
+finalizado: true
+});
+
+// El bloqueo por IP recién se activa AQUÍ, cuando la key ya está lista.
+await guardarBloqueo(ipHash, expiraTimestamp);
+
+return expiraTimestamp;
+
+}
+
+// --- Bloqueo por IP (cooldown entre keys, solo tras completar una) ---
+
+async function leerBloqueo(ipHash){
+
+const snap=await get(ref(db,"IPS/"+ipHash));
 return snap.exists() ? snap.val() : null;
 
 }
 
-async function guardarBloqueo(ipSafe, bloqueadoHasta){
+async function guardarBloqueo(ipHash, bloqueadoHasta){
 
-await set(ref(db,"IPS/"+ipSafe), { bloqueadoHasta });
+await set(ref(db,"IPS/"+ipHash), { bloqueadoHasta });
 
 }
 
@@ -536,8 +593,9 @@ const copiarBtn=document.getElementById("copiar");
 
 let estadoActual=null;
 let ipActual=null;
-let ipSafeActual=null;
+let ipHashActual=null;
 let intervaloContador=null;
+let procesando=false;
 
 function ocultarTodo(){
 
@@ -709,6 +767,8 @@ document.querySelectorAll(".botones .btn").forEach(btn=>{
 
 btn.addEventListener("click", async ()=>{
 
+if(procesando) return;
+
 if(!ipActual){
 estadoDiv.innerText="✘ No se pudo verificar tu conexión, recarga la página";
 estadoDiv.classList.add("error");
@@ -716,7 +776,7 @@ return;
 }
 
 // Doble chequeo defensivo: revalida el bloqueo justo antes de generar
-const bloqueo=await leerBloqueo(ipSafeActual);
+const bloqueo=await leerBloqueo(ipHashActual);
 
 if(bloqueo && bloqueo.bloqueadoHasta>Date.now()){
 
@@ -725,6 +785,8 @@ return;
 
 }
 
+procesando=true;
+
 const horas=parseInt(btn.dataset.horas);
 const total=FASES_POR_HORA[horas];
 
@@ -732,22 +794,15 @@ document.querySelectorAll(".botones .btn").forEach(b=> b.disabled=true );
 btn.innerHTML="<span class='spinner'></span> Preparando...";
 
 const key=generarKey();
-const expiraTimestamp=Date.now()+(horas*60*60*1000);
 
 try{
 
-// La key solo guarda tu IP y el timestamp exacto de expiración
-await set(ref(db,"KEYS/"+key),{
-ip: ipActual,
-expira: expiraTimestamp
-});
-
+// En este punto NO se escribe bloqueo ni datos finales de la key.
+// Solo se registra el progreso; la key recién se "activa" (con IP,
+// timestamp de expiración y bloqueo) al terminar todas las fases.
 await guardarProgreso(key,1,false);
 
-// El bloqueo de tu IP dura lo mismo que la duración de la key elegida
-await guardarBloqueo(ipSafeActual, expiraTimestamp);
-
-estadoActual={ key, horas, expira:expiraTimestamp, ip:ipActual, fase:1, done:false };
+estadoActual={ key, horas, ip: ipHashActual, fase:1, done:false };
 
 const url=new URL(window.location.href);
 url.search="";
@@ -764,6 +819,10 @@ document.querySelectorAll(".botones .btn").forEach(b=> b.disabled=false );
 estadoDiv.innerText="✘ Error al generar la key";
 estadoDiv.classList.add("error");
 
+}finally{
+
+procesando=false;
+
 }
 
 });
@@ -772,10 +831,14 @@ estadoDiv.classList.add("error");
 
 btnFase.addEventListener("click", async ()=>{
 
+if(procesando) return;
+
 if(!estadoActual){
 mostrarError("Sesión inválida, genera una key de nuevo.");
 return;
 }
+
+procesando=true;
 
 const total=FASES_POR_HORA[estadoActual.horas];
 const esUltimaFase=estadoActual.fase>=total;
@@ -802,6 +865,10 @@ btnFase.innerText="INICIAR FASE "+estadoActual.fase;
 estadoDiv.innerText="✘ Error al continuar, inténtalo de nuevo";
 estadoDiv.classList.add("error");
 
+}finally{
+
+procesando=false;
+
 }
 
 });
@@ -818,12 +885,12 @@ if(token){
 const estado=await leerToken(token);
 
 if(!estado){
-mostrarError("Enlace inválido o alterado. Genera una key nuevamente.");
+mostrarError("Enlace inválido, alterado o vencido. Genera una key nuevamente.");
 return;
 }
 
-// La IP actual debe coincidir con la que generó la key
-if(estado.ip!==ipActual){
+// El hash de IP dentro del token debe coincidir con el de esta sesión
+if(estado.ip!==ipHashActual){
 mostrarError("Este enlace fue generado desde otra conexión y no es válido aquí.");
 return;
 }
@@ -844,7 +911,10 @@ const total=FASES_POR_HORA[estado.horas];
 
 if(estado.done){
 
-mostrarKey(estado.key, estado.expira);
+// Recién aquí, al haber terminado todas las fases, se finaliza la key
+// (se guarda su IP + timestamp de expiración) y se activa el bloqueo.
+const expiraTimestamp=await finalizarKeySiNecesario(estado.key, estado.horas, ipHashActual);
+mostrarKey(estado.key, expiraTimestamp);
 
 }else{
 
@@ -856,8 +926,9 @@ return;
 
 }
 
-// Sin token: revisamos si la IP tiene un bloqueo activo
-const bloqueo=await leerBloqueo(ipSafeActual);
+// Sin token: revisamos si la IP tiene un bloqueo activo (solo existe
+// si ya completaste una key alguna vez).
+const bloqueo=await leerBloqueo(ipHashActual);
 
 if(bloqueo && bloqueo.bloqueadoHasta>Date.now()){
 
@@ -883,7 +954,7 @@ return;
 
 }
 
-ipSafeActual=sanitizarIP(ipActual);
+ipHashActual=await hashIP(ipActual);
 ipInfoDiv.innerText="Conexión verificada";
 
 await revisarEstadoInicial();
