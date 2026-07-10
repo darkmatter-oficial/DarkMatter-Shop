@@ -2,6 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <title>DarkMatter Key Generator</title>
 
 <style>
@@ -11,20 +12,22 @@
 
 body{
     margin:0;
-    height:100vh;
+    min-height:100vh;
     display:flex;
     justify-content:center;
     align-items:center;
     background:radial-gradient(circle at top, #1e0530, #0a0010 70%);
     font-family:'Segoe UI', Arial, sans-serif;
+    padding:20px;
 }
 
 .card{
-    width:380px;
+    width:100%;
+    max-width:420px;
     background:linear-gradient(160deg,#22093a,#170428);
     border:1px solid #a855f7;
     border-radius:24px;
-    padding:36px 30px;
+    padding:40px 32px;
     text-align:center;
     color:white;
     box-shadow:0 0 60px rgba(139,92,246,0.35), inset 0 0 30px rgba(168,85,247,0.05);
@@ -38,32 +41,32 @@ body{
 
 h1{
     color:#d8b4fe;
-    letter-spacing:4px;
-    font-size:26px;
-    margin:0 0 6px 0;
+    letter-spacing:5px;
+    font-size:32px;
+    margin:0 0 8px 0;
     text-shadow:0 0 20px #a855f7;
 }
 
 .subtitulo{
     color:#8b5cf6;
-    font-size:13px;
-    margin-bottom:26px;
+    font-size:15px;
+    margin-bottom:32px;
     letter-spacing:1px;
 }
 
 .botones{
     display:flex;
     flex-direction:column;
-    gap:14px;
+    gap:16px;
 }
 
 .btn{
     background:#2b0a47;
     border:1px solid #7c3aed;
     color:#e9d5ff;
-    padding:14px;
-    border-radius:12px;
-    font-size:15px;
+    padding:18px;
+    border-radius:14px;
+    font-size:17px;
     font-weight:600;
     letter-spacing:1px;
     cursor:pointer;
@@ -81,13 +84,19 @@ h1{
     transform:translateY(0);
 }
 
+.btn:disabled{
+    opacity:0.6;
+    cursor:not-allowed;
+    transform:none;
+}
+
 .key{
     background:#170428;
     border:1px solid #7c3aed;
-    border-radius:14px;
-    padding:18px;
-    margin-top:22px;
-    font-size:20px;
+    border-radius:16px;
+    padding:22px;
+    margin-top:26px;
+    font-size:24px;
     font-weight:bold;
     color:#d8b4fe;
     letter-spacing:1px;
@@ -97,11 +106,11 @@ h1{
 }
 
 .expira{
-    margin-top:14px;
+    margin-top:16px;
     color:#facc15;
-    font-size:13px;
+    font-size:15px;
     display:none;
-    line-height:1.5;
+    line-height:1.6;
 }
 
 .expira b{
@@ -109,19 +118,19 @@ h1{
 }
 
 .estado{
-    margin-top:16px;
-    font-size:14px;
+    margin-top:18px;
+    font-size:15px;
     font-weight:600;
     color:#7ee787;
-    min-height:18px;
+    min-height:20px;
 }
 
 .btn-volver{
-    margin-top:22px;
+    margin-top:26px;
     background:none;
     border:none;
     color:#a855f7;
-    font-size:13px;
+    font-size:14px;
     text-decoration:underline;
     cursor:pointer;
     display:none;
@@ -131,10 +140,27 @@ h1{
     color:#d8b4fe;
 }
 
+.btn-copiar{
+    margin-top:16px;
+    background:#3b0764;
+    border:1px solid #a855f7;
+    color:#e9d5ff;
+    padding:10px 18px;
+    border-radius:10px;
+    font-size:14px;
+    cursor:pointer;
+    display:none;
+}
+
+.btn-copiar:hover{
+    background:#a855f7;
+    color:#170428;
+}
+
 .spinner{
     display:inline-block;
-    width:14px;
-    height:14px;
+    width:16px;
+    height:16px;
     border:2px solid #a855f7;
     border-top:2px solid transparent;
     border-radius:50%;
@@ -166,6 +192,8 @@ h1{
 
 <div class="estado" id="estado"></div>
 
+<button class="btn-copiar" id="copiar">📋 Copiar key</button>
+
 <button class="btn-volver" id="volver">← Generar otra key</button>
 
 </div>
@@ -193,6 +221,11 @@ appId:"..."
 
 const app=initializeApp(firebaseConfig);
 const db=getDatabase(app);
+
+// ⚠️ Pega aquí tu API KEY de cuty.io (la encuentras en tu panel de cuty.io)
+const CUTY_API_KEY="0a4fb7e2e5e7b96961905bbc5";
+
+const PAGINA_BASE="https://darkmatter-oficial.github.io/DarkMatter-Shop/";
 
 function generarKey(){
 
@@ -237,13 +270,33 @@ const keyDiv=document.getElementById("key");
 const expiraDiv=document.getElementById("expira");
 const estadoDiv=document.getElementById("estado");
 const volverBtn=document.getElementById("volver");
+const copiarBtn=document.getElementById("copiar");
+
+function mostrarKey(key, expiraTexto){
+
+botones.style.display="none";
+keyDiv.style.display="block";
+expiraDiv.style.display="block";
+volverBtn.style.display="inline-block";
+copiarBtn.style.display="inline-block";
+
+keyDiv.innerText=key;
+expiraDiv.innerHTML="Expira el:<br><b>"+expiraTexto+"</b>";
+estadoDiv.innerText="✔ Key lista para usar";
+
+}
 
 function reiniciar(){
+
+const url=new URL(window.location.href);
+url.search="";
+window.history.replaceState({}, "", url.toString());
 
 botones.style.display="flex";
 keyDiv.style.display="none";
 expiraDiv.style.display="none";
 volverBtn.style.display="none";
+copiarBtn.style.display="none";
 estadoDiv.innerText="";
 keyDiv.innerText="";
 expiraDiv.innerHTML="";
@@ -252,19 +305,47 @@ expiraDiv.innerHTML="";
 
 volverBtn.addEventListener("click", reiniciar);
 
+copiarBtn.addEventListener("click", ()=>{
+
+navigator.clipboard.writeText(keyDiv.innerText);
+estadoDiv.innerText="✔ Key copiada al portapapeles";
+
+});
+
+// Al cargar la página, revisamos si venimos de vuelta desde cuty.io con una key
+window.addEventListener("DOMContentLoaded", ()=>{
+
+const params=new URLSearchParams(window.location.search);
+const key=params.get("key");
+const expira=params.get("expira");
+
+if(key && expira){
+
+mostrarKey(key, decodeURIComponent(expira));
+
+}
+
+});
+
+async function acortarConCuty(urlLarga){
+
+const apiUrl="https://cuty.io/api?api="+CUTY_API_KEY+"&url="+encodeURIComponent(urlLarga)+"&format=text";
+
+const respuesta=await fetch(apiUrl);
+const texto=await respuesta.text();
+
+return texto.trim();
+
+}
+
 document.querySelectorAll(".btn").forEach(btn=>{
 
 btn.addEventListener("click", async ()=>{
 
 const horas=parseInt(btn.dataset.horas);
 
-botones.style.display="none";
-
-keyDiv.style.display="block";
-expiraDiv.style.display="block";
-
-keyDiv.innerHTML="<span class='spinner'></span> Generando...";
-estadoDiv.innerText="Conectando...";
+document.querySelectorAll(".btn").forEach(b=> b.disabled=true );
+btn.innerHTML="<span class='spinner'></span> Generando...";
 
 const key=generarKey();
 
@@ -274,9 +355,6 @@ const fechaExpira=new Date(ahora.getTime() + (horas*60*60*1000));
 const expiraTexto=formatearFecha(fechaExpira);
 const expiraTimestamp=fechaExpira.getTime();
 
-keyDiv.innerText=key;
-expiraDiv.innerHTML="Expira el:<br><b>"+expiraTexto+"</b>";
-
 try{
 
 await set(ref(db,"KEYS/"+key),{
@@ -285,13 +363,17 @@ expira:expiraTexto,
 expiraTimestamp:expiraTimestamp
 });
 
-estadoDiv.innerText="✔ Key agregada";
-volverBtn.style.display="inline-block";
+const urlRetorno=PAGINA_BASE+"?key="+encodeURIComponent(key)+"&expira="+encodeURIComponent(expiraTexto);
+
+const enlaceCorto=await acortarConCuty(urlRetorno);
+
+window.location.href=enlaceCorto;
 
 }catch(e){
 
-estadoDiv.innerText="✘ Error al guardar";
-volverBtn.style.display="inline-block";
+btn.innerHTML=btn.dataset.horas+" HORAS";
+document.querySelectorAll(".btn").forEach(b=> b.disabled=false );
+estadoDiv.innerText="✘ Error al generar la key";
 
 }
 
