@@ -362,7 +362,7 @@ getDatabase,
 ref,
 set,
 get,
-update
+runTransaction
 }
 from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
@@ -383,7 +383,11 @@ const CUTY_API_KEY="0a4fb7e2e5e7b96961905bbc5";
 
 const PAGINA_BASE="https://darkmatter-oficial.github.io/DarkMatter-Shop/";
 
-// Sal usada para firmar y hashear (cámbiala por una tuya, larga y única)
+// Sal usada para firmar y hashear (cámbiala por una tuya, larga y única).
+// OJO: al vivir en JS de cliente, cualquiera puede leerla con F12. No es
+// una protección real contra alguien decidido a forjar tokens; solo evita
+// manipulación casual. La protección real contra spam/bypass debe vivir
+// en un backend (Cloud Function) que nunca entregue este valor al cliente.
 const SAL_FIRMA="dm-2026-cambia-esta-sal-por-una-tuya-larga-y-unica";
 
 const FASES_POR_HORA={ 2:1, 5:2, 8:3 };
@@ -396,9 +400,12 @@ const TOKEN_MAX_EDAD_MS=20*60*1000; // 20 minutos
 function generarKey(){
 
 const letras="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+const valoresAleatorios=new Uint32Array(10);
+crypto.getRandomValues(valoresAleatorios);
+
 let texto="DM_";
 for(let i=0;i<10;i++){
-texto+=letras[Math.floor(Math.random()*letras.length)];
+texto+=letras[valoresAleatorios[i]%letras.length];
 }
 return texto;
 
@@ -468,6 +475,10 @@ return await sha256Hex("ip:"+ip+":"+SAL_FIRMA);
 }
 
 // --- Firma y validez temporal del token de estado ---
+// Este token es la ÚNICA fuente de verdad del progreso mientras el usuario
+// está en medio del ciclo de anuncios. No se escribe nada en Firebase hasta
+// que el token llega con done:true y pasa todas las validaciones. Así, un
+// intento abandonado a mitad de camino no deja basura en la base de datos.
 
 async function crearToken(estado){
 
@@ -508,6 +519,16 @@ if(!FASES_POR_HORA[estado.horas]){
 return null;
 }
 
+// La fase declarada debe estar dentro del rango válido para esa duración
+const totalFases=FASES_POR_HORA[estado.horas];
+if(!Number.isInteger(estado.fase) || estado.fase<1 || estado.fase>totalFases){
+return null;
+}
+
+if(typeof estado.key!=="string" || estado.key.length<5){
+return null;
+}
+
 return estado;
 
 }catch(e){
@@ -518,47 +539,45 @@ return null;
 
 }
 
-// --- Progreso de fases (fuente de verdad en Firebase, no en la URL) ---
+// --- Finaliza la key SOLO cuando se completaron todas las fases y rondas ---
+// Es idempotente y atómico (usa una transacción de Firebase): si dos
+// pestañas llegan al mismo tiempo con el mismo token final, solo una de
+// ellas activa realmente el bloqueo de IP; la otra simplemente lee el
+// resultado que ya quedó guardado. Esta es la ÚNICA función de todo el
+// flujo que escribe algo relacionado con una key concreta en Firebase.
 
-async function leerProgreso(key){
-
-const snap=await get(ref(db,"KEYS/"+key+"/progreso"));
-return snap.exists() ? snap.val() : null;
-
-}
-
-async function guardarProgreso(key,fase,done){
-
-await set(ref(db,"KEYS/"+key+"/progreso"), { fase, done: !!done });
-
-}
-
-// Finaliza la key SOLO cuando se completaron todas las fases y rondas.
-// Es idempotente: si ya estaba finalizada, no vuelve a escribir nada
-// (así no se puede "recargar" el bloqueo revisitando el mismo link).
 async function finalizarKeySiNecesario(key,horas,ipHash){
 
-const yaSnap=await get(ref(db,"KEYS/"+key+"/finalizado"));
+const expiraTimestamp=Date.now()+(horas*60*60*1000);
+const nodeRef=ref(db,"KEYS/"+key);
 
-if(yaSnap.exists() && yaSnap.val()===true){
+const resultado=await runTransaction(nodeRef,(actual)=>{
 
-const expiraSnap=await get(ref(db,"KEYS/"+key+"/expira"));
-return expiraSnap.val();
-
+if(actual && actual.finalizado===true){
+// Ya estaba finalizada por otro intento/pestaña: no tocar nada
+return;
 }
 
-const expiraTimestamp=Date.now()+(horas*60*60*1000);
-
-await update(ref(db,"KEYS/"+key), {
+return {
 ipHash,
 expira: expiraTimestamp,
 finalizado: true
+};
+
 });
 
-// El bloqueo por IP recién se activa AQUÍ, cuando la key ya está lista.
-await guardarBloqueo(ipHash, expiraTimestamp);
+if(resultado.committed){
 
+// Esta ejecución fue la que finalizó la key de verdad:
+// recién aquí se activa el bloqueo por IP.
+await guardarBloqueo(ipHash, expiraTimestamp);
 return expiraTimestamp;
+
+}
+
+// Ya estaba finalizada antes: devolvemos su expiración real
+const datos=resultado.snapshot.val();
+return datos ? datos.expira : expiraTimestamp;
 
 }
 
@@ -728,9 +747,20 @@ estadoDiv.innerText="✔ Key copiada al portapapeles";
 async function acortarConCuty(urlLarga){
 
 const apiUrl="https://cuty.io/api?api="+CUTY_API_KEY+"&url="+encodeURIComponent(urlLarga)+"&format=text";
+
 const respuesta=await fetch(apiUrl);
-const texto=await respuesta.text();
-return texto.trim();
+
+if(!respuesta.ok){
+throw new Error("cuty.io respondió con error "+respuesta.status);
+}
+
+const texto=(await respuesta.text()).trim();
+
+if(!texto || !texto.startsWith("http")){
+throw new Error("cuty.io devolvió una respuesta inválida");
+}
+
+return texto;
 
 }
 
@@ -748,11 +778,11 @@ return urlActual;
 
 }
 
+// Genera el token de la siguiente fase (o del final) y arma la cadena de
+// anuncios. Nada de esto toca Firebase: todo el estado viaja en el token.
 async function irACutyFase(estadoBase, faseSiguiente, total, done){
 
 const nuevoEstado={ ...estadoBase, fase: done ? estadoBase.fase : faseSiguiente, done: !!done };
-
-await guardarProgreso(nuevoEstado.key, nuevoEstado.fase, nuevoEstado.done);
 
 const token=await crearToken(nuevoEstado);
 const urlDestinoFinal=PAGINA_BASE+"?t="+encodeURIComponent(token);
@@ -793,15 +823,14 @@ const total=FASES_POR_HORA[horas];
 document.querySelectorAll(".botones .btn").forEach(b=> b.disabled=true );
 btn.innerHTML="<span class='spinner'></span> Preparando...";
 
-const key=generarKey();
-
 try{
 
-// En este punto NO se escribe bloqueo ni datos finales de la key.
-// Solo se registra el progreso; la key recién se "activa" (con IP,
-// timestamp de expiración y bloqueo) al terminar todas las fases.
-await guardarProgreso(key,1,false);
+const key=generarKey();
 
+// IMPORTANTE: aquí ya NO se escribe nada en Firebase. La key recién
+// generada solo existe en memoria y dentro del token firmado. Si el
+// usuario abandona el proceso a mitad de camino, no queda ningún
+// rastro en la base de datos.
 estadoActual={ key, horas, ip: ipHashActual, fase:1, done:false };
 
 const url=new URL(window.location.href);
@@ -895,17 +924,6 @@ mostrarError("Este enlace fue generado desde otra conexión y no es válido aqu�
 return;
 }
 
-const progresoReal=await leerProgreso(estado.key);
-
-if(!progresoReal
-|| progresoReal.fase!==estado.fase
-|| !!progresoReal.done!==!!estado.done){
-
-mostrarError("Este enlace ya no es válido. Genera una key nuevamente.");
-return;
-
-}
-
 estadoActual=estado;
 const total=FASES_POR_HORA[estado.horas];
 
@@ -913,6 +931,7 @@ if(estado.done){
 
 // Recién aquí, al haber terminado todas las fases, se finaliza la key
 // (se guarda su IP + timestamp de expiración) y se activa el bloqueo.
+// Esta es la única escritura en Firebase de todo el flujo.
 const expiraTimestamp=await finalizarKeySiNecesario(estado.key, estado.horas, ipHashActual);
 mostrarKey(estado.key, expiraTimestamp);
 
