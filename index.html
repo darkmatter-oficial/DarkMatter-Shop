@@ -90,6 +90,49 @@ h1{
     transform:none;
 }
 
+.fase-info{
+    background:#170428;
+    border:1px solid #7c3aed;
+    border-radius:16px;
+    padding:24px 18px;
+    margin-top:6px;
+    display:none;
+}
+
+.fase-titulo{
+    color:#c084fc;
+    font-size:15px;
+    letter-spacing:1px;
+    margin-bottom:4px;
+}
+
+.fase-progreso{
+    color:#facc15;
+    font-size:22px;
+    font-weight:bold;
+    margin-bottom:18px;
+}
+
+.dots{
+    display:flex;
+    justify-content:center;
+    gap:8px;
+    margin-bottom:18px;
+}
+
+.dot{
+    width:12px;
+    height:12px;
+    border-radius:50%;
+    background:#3b0764;
+    border:1px solid #7c3aed;
+}
+
+.dot.activo{
+    background:#a855f7;
+    box-shadow:0 0 10px #a855f7;
+}
+
 .key{
     background:#170428;
     border:1px solid #7c3aed;
@@ -186,6 +229,13 @@ h1{
 <button class="btn" data-horas="8">KEY 8 HORAS</button>
 </div>
 
+<div class="fase-info" id="faseInfo">
+<div class="fase-titulo" id="faseTitulo">FASE PENDIENTE</div>
+<div class="fase-progreso" id="faseProgreso">Fase 1 de 3</div>
+<div class="dots" id="dots"></div>
+<button class="btn" id="btnFase">INICIAR FASE</button>
+</div>
+
 <div class="key" id="key"></div>
 
 <div class="expira" id="expira"></div>
@@ -223,9 +273,16 @@ const app=initializeApp(firebaseConfig);
 const db=getDatabase(app);
 
 // ⚠️ Pega aquí tu API KEY de cuty.io (la encuentras en tu panel de cuty.io)
-const CUTY_API_KEY="0a4fb7e2e5e7b96961905bbc5";
+const CUTY_API_KEY="TU_API_KEY_DE_CUTY";
 
 const PAGINA_BASE="https://darkmatter-oficial.github.io/DarkMatter-Shop/";
+
+// Cuántas fases de anuncios requiere cada duración
+const FASES_POR_HORA={
+2:1,
+5:2,
+8:3
+};
 
 function generarKey(){
 
@@ -266,15 +323,63 @@ return `${diaSemana} ${dia}/${mes}/${anio} - ${horas}:${minutos}:${segundos} ${a
 }
 
 const botones=document.getElementById("botones");
+const faseInfoDiv=document.getElementById("faseInfo");
+const faseTituloDiv=document.getElementById("faseTitulo");
+const faseProgresoDiv=document.getElementById("faseProgreso");
+const dotsDiv=document.getElementById("dots");
+const btnFase=document.getElementById("btnFase");
 const keyDiv=document.getElementById("key");
 const expiraDiv=document.getElementById("expira");
 const estadoDiv=document.getElementById("estado");
 const volverBtn=document.getElementById("volver");
 const copiarBtn=document.getElementById("copiar");
 
-function mostrarKey(key, expiraTexto){
+function ocultarTodo(){
 
 botones.style.display="none";
+faseInfoDiv.style.display="none";
+keyDiv.style.display="none";
+expiraDiv.style.display="none";
+volverBtn.style.display="none";
+copiarBtn.style.display="none";
+estadoDiv.innerText="";
+
+}
+
+function pintarDots(faseActual,total){
+
+dotsDiv.innerHTML="";
+
+for(let i=1;i<=total;i++){
+
+const d=document.createElement("div");
+d.className="dot"+(i<=faseActual ? " activo" : "");
+dotsDiv.appendChild(d);
+
+}
+
+}
+
+function mostrarPantallaFase(faseSiguiente,total){
+
+ocultarTodo();
+
+faseInfoDiv.style.display="block";
+volverBtn.style.display="inline-block";
+
+faseTituloDiv.innerText="DEBES COMPLETAR TODAS LAS FASES";
+faseProgresoDiv.innerText="Fase "+faseSiguiente+" de "+total;
+pintarDots(faseSiguiente-1,total);
+
+btnFase.disabled=false;
+btnFase.innerText="INICIAR FASE "+faseSiguiente;
+
+}
+
+function mostrarKey(key, expiraTexto){
+
+ocultarTodo();
+
 keyDiv.style.display="block";
 expiraDiv.style.display="block";
 volverBtn.style.display="inline-block";
@@ -292,12 +397,8 @@ const url=new URL(window.location.href);
 url.search="";
 window.history.replaceState({}, "", url.toString());
 
+ocultarTodo();
 botones.style.display="flex";
-keyDiv.style.display="none";
-expiraDiv.style.display="none";
-volverBtn.style.display="none";
-copiarBtn.style.display="none";
-estadoDiv.innerText="";
 keyDiv.innerText="";
 expiraDiv.innerHTML="";
 
@@ -312,21 +413,6 @@ estadoDiv.innerText="✔ Key copiada al portapapeles";
 
 });
 
-// Al cargar la página, revisamos si venimos de vuelta desde cuty.io con una key
-window.addEventListener("DOMContentLoaded", ()=>{
-
-const params=new URLSearchParams(window.location.search);
-const key=params.get("key");
-const expira=params.get("expira");
-
-if(key && expira){
-
-mostrarKey(key, decodeURIComponent(expira));
-
-}
-
-});
-
 async function acortarConCuty(urlLarga){
 
 const apiUrl="https://cuty.io/api?api="+CUTY_API_KEY+"&url="+encodeURIComponent(urlLarga)+"&format=text";
@@ -338,13 +424,30 @@ return texto.trim();
 
 }
 
-document.querySelectorAll(".btn").forEach(btn=>{
+async function irAFase(key,horas,expiraTexto,fase,total){
+
+const urlRetorno=PAGINA_BASE
++"?key="+encodeURIComponent(key)
++"&horas="+horas
++"&expira="+encodeURIComponent(expiraTexto)
++"&fase="+fase
++"&total="+total;
+
+const enlaceCorto=await acortarConCuty(urlRetorno);
+
+window.location.href=enlaceCorto;
+
+}
+
+// Botones iniciales para elegir duración
+document.querySelectorAll(".botones .btn").forEach(btn=>{
 
 btn.addEventListener("click", async ()=>{
 
 const horas=parseInt(btn.dataset.horas);
+const total=FASES_POR_HORA[horas];
 
-document.querySelectorAll(".btn").forEach(b=> b.disabled=true );
+document.querySelectorAll(".botones .btn").forEach(b=> b.disabled=true );
 btn.innerHTML="<span class='spinner'></span> Generando...";
 
 const key=generarKey();
@@ -363,21 +466,70 @@ expira:expiraTexto,
 expiraTimestamp:expiraTimestamp
 });
 
-const urlRetorno=PAGINA_BASE+"?key="+encodeURIComponent(key)+"&expira="+encodeURIComponent(expiraTexto);
-
-const enlaceCorto=await acortarConCuty(urlRetorno);
-
-window.location.href=enlaceCorto;
+await irAFase(key,horas,expiraTexto,1,total);
 
 }catch(e){
 
 btn.innerHTML=btn.dataset.horas+" HORAS";
-document.querySelectorAll(".btn").forEach(b=> b.disabled=false );
+document.querySelectorAll(".botones .btn").forEach(b=> b.disabled=false );
 estadoDiv.innerText="✘ Error al generar la key";
 
 }
 
 });
+
+});
+
+// Botón para avanzar a la siguiente fase
+btnFase.addEventListener("click", async ()=>{
+
+const params=new URLSearchParams(window.location.search);
+const key=params.get("key");
+const horas=params.get("horas");
+const expira=params.get("expira");
+const fase=parseInt(params.get("fase"));
+const total=parseInt(params.get("total"));
+
+btnFase.disabled=true;
+btnFase.innerHTML="<span class='spinner'></span> Redirigiendo...";
+
+try{
+
+await irAFase(key,horas,decodeURIComponent(expira),fase+1,total);
+
+}catch(e){
+
+btnFase.disabled=false;
+btnFase.innerText="INICIAR FASE "+(fase+1);
+estadoDiv.innerText="✘ Error al continuar, inténtalo de nuevo";
+
+}
+
+});
+
+// Al cargar la página, revisamos en qué punto del flujo estamos
+window.addEventListener("DOMContentLoaded", ()=>{
+
+const params=new URLSearchParams(window.location.search);
+const key=params.get("key");
+const horas=params.get("horas");
+const expira=params.get("expira");
+const fase=parseInt(params.get("fase"));
+const total=parseInt(params.get("total"));
+
+if(key && horas && expira && fase && total){
+
+if(fase<total){
+
+mostrarPantallaFase(fase+1, total);
+
+}else{
+
+mostrarKey(key, decodeURIComponent(expira));
+
+}
+
+}
 
 });
 
