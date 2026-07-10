@@ -110,14 +110,21 @@ h1{
     color:#facc15;
     font-size:22px;
     font-weight:bold;
+    margin-bottom:6px;
+}
+
+.ronda-info{
+    color:#a855f7;
+    font-size:13px;
     margin-bottom:18px;
+    letter-spacing:0.5px;
 }
 
 .dots{
     display:flex;
     justify-content:center;
     gap:8px;
-    margin-bottom:18px;
+    margin-bottom:10px;
 }
 
 .dot{
@@ -131,6 +138,26 @@ h1{
 .dot.activo{
     background:#a855f7;
     box-shadow:0 0 10px #a855f7;
+}
+
+.dots-ronda{
+    display:flex;
+    justify-content:center;
+    gap:6px;
+    margin-bottom:20px;
+}
+
+.dot-ronda{
+    width:8px;
+    height:8px;
+    border-radius:50%;
+    background:#3b0764;
+    border:1px solid #6d28d9;
+}
+
+.dot-ronda.activo{
+    background:#facc15;
+    box-shadow:0 0 8px #facc15;
 }
 
 .key{
@@ -166,6 +193,10 @@ h1{
     font-weight:600;
     color:#7ee787;
     min-height:20px;
+}
+
+.estado.error{
+    color:#f87171;
 }
 
 .btn-volver{
@@ -230,10 +261,12 @@ h1{
 </div>
 
 <div class="fase-info" id="faseInfo">
-<div class="fase-titulo" id="faseTitulo">FASE PENDIENTE</div>
+<div class="fase-titulo">DEBES COMPLETAR TODAS LAS FASES</div>
 <div class="fase-progreso" id="faseProgreso">Fase 1 de 3</div>
 <div class="dots" id="dots"></div>
-<button class="btn" id="btnFase">INICIAR FASE</button>
+<div class="ronda-info" id="rondaInfo">Ronda 1 de 3</div>
+<div class="dots-ronda" id="dotsRonda"></div>
+<button class="btn" id="btnFase">INICIAR FASE 1</button>
 </div>
 
 <div class="key" id="key"></div>
@@ -255,7 +288,8 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/fireba
 import {
 getDatabase,
 ref,
-set
+set,
+get
 }
 from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
@@ -272,30 +306,23 @@ appId:"..."
 const app=initializeApp(firebaseConfig);
 const db=getDatabase(app);
 
-// ⚠️ Pega aquí tu API KEY de cuty.io (la encuentras en tu panel de cuty.io)
 const CUTY_API_KEY="0a4fb7e2e5e7b96961905bbc5";
 
 const PAGINA_BASE="https://darkmatter-oficial.github.io/DarkMatter-Shop/";
 
-// Cuántas fases de anuncios requiere cada duración
-const FASES_POR_HORA={
-2:1,
-5:2,
-8:3
-};
+// Sal usada para firmar el estado del flujo (fase/ronda). Cámbiala por algo tuyo.
+const SAL_FIRMA="dm-2026-cambia-esta-sal-por-una-tuya";
+
+const FASES_POR_HORA={ 2:1, 5:2, 8:3 };
+const RONDAS_POR_FASE=3;
 
 function generarKey(){
 
 const letras="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-
 let texto="DM_";
-
 for(let i=0;i<10;i++){
-
 texto+=letras[Math.floor(Math.random()*letras.length)];
-
 }
-
 return texto;
 
 }
@@ -304,35 +331,88 @@ function formatearFecha(fecha){
 
 const dias=["Domingo","Lunes","Martes","Miércoles","Jueves","Viernes","Sábado"];
 const diaSemana=dias[fecha.getDay()];
-
 const dia=String(fecha.getDate()).padStart(2,"0");
 const mes=String(fecha.getMonth()+1).padStart(2,"0");
 const anio=fecha.getFullYear();
-
 let horas=fecha.getHours();
 const minutos=String(fecha.getMinutes()).padStart(2,"0");
 const segundos=String(fecha.getSeconds()).padStart(2,"0");
 const ampm=horas>=12 ? "PM" : "AM";
-
 horas=horas%12;
 horas=horas ? horas : 12;
 horas=String(horas).padStart(2,"0");
-
 return `${diaSemana} ${dia}/${mes}/${anio} - ${horas}:${minutos}:${segundos} ${ampm}`;
+
+}
+
+// --- Firma del estado (evita que editen fase/ronda/done a mano en la URL) ---
+
+async function sha256Hex(texto){
+
+const buffer=await crypto.subtle.digest("SHA-256", new TextEncoder().encode(texto));
+return Array.from(new Uint8Array(buffer)).map(b=>b.toString(16).padStart(2,"0")).join("");
+
+}
+
+async function crearToken(estado){
+
+const payload=JSON.stringify(estado);
+const firma=await sha256Hex(payload+SAL_FIRMA);
+return btoa(unescape(encodeURIComponent(payload)))+"."+firma;
+
+}
+
+async function leerToken(token){
+
+try{
+
+const [payloadB64, firma]=token.split(".");
+const payload=decodeURIComponent(escape(atob(payloadB64)));
+const firmaEsperada=await sha256Hex(payload+SAL_FIRMA);
+
+if(firma!==firmaEsperada){
+return null;
+}
+
+return JSON.parse(payload);
+
+}catch(e){
+
+return null;
+
+}
+
+}
+
+// --- Progreso real guardado en Firebase (fuente de verdad, no la URL) ---
+
+async function leerProgreso(key){
+
+const snap=await get(ref(db,"KEYS/"+key+"/progreso"));
+return snap.exists() ? snap.val() : null;
+
+}
+
+async function guardarProgreso(key,fase,ronda,done){
+
+await set(ref(db,"KEYS/"+key+"/progreso"), { fase, ronda, done: !!done });
 
 }
 
 const botones=document.getElementById("botones");
 const faseInfoDiv=document.getElementById("faseInfo");
-const faseTituloDiv=document.getElementById("faseTitulo");
 const faseProgresoDiv=document.getElementById("faseProgreso");
 const dotsDiv=document.getElementById("dots");
+const rondaInfoDiv=document.getElementById("rondaInfo");
+const dotsRondaDiv=document.getElementById("dotsRonda");
 const btnFase=document.getElementById("btnFase");
 const keyDiv=document.getElementById("key");
 const expiraDiv=document.getElementById("expira");
 const estadoDiv=document.getElementById("estado");
 const volverBtn=document.getElementById("volver");
 const copiarBtn=document.getElementById("copiar");
+
+let estadoActual=null;
 
 function ocultarTodo(){
 
@@ -343,43 +423,61 @@ expiraDiv.style.display="none";
 volverBtn.style.display="none";
 copiarBtn.style.display="none";
 estadoDiv.innerText="";
+estadoDiv.classList.remove("error");
 
 }
 
-function pintarDots(faseActual,total){
+function mostrarError(msg){
+
+ocultarTodo();
+botones.style.display="flex";
+estadoDiv.innerText=msg;
+estadoDiv.classList.add("error");
+
+}
+
+function pintarDotsFases(faseActual,total){
 
 dotsDiv.innerHTML="";
-
 for(let i=1;i<=total;i++){
-
 const d=document.createElement("div");
 d.className="dot"+(i<=faseActual ? " activo" : "");
 dotsDiv.appendChild(d);
-
 }
 
 }
 
-function mostrarPantallaFase(faseSiguiente,total){
+function pintarDotsRonda(rondaActual){
+
+dotsRondaDiv.innerHTML="";
+for(let i=1;i<=RONDAS_POR_FASE;i++){
+const d=document.createElement("div");
+d.className="dot-ronda"+(i<=rondaActual ? " activo" : "");
+dotsRondaDiv.appendChild(d);
+}
+
+}
+
+function mostrarPantallaFase(fase,ronda,total){
 
 ocultarTodo();
-
 faseInfoDiv.style.display="block";
 volverBtn.style.display="inline-block";
 
-faseTituloDiv.innerText="DEBES COMPLETAR TODAS LAS FASES";
-faseProgresoDiv.innerText="Fase "+faseSiguiente+" de "+total;
-pintarDots(faseSiguiente-1,total);
+faseProgresoDiv.innerText="Fase "+fase+" de "+total;
+pintarDotsFases(fase,total);
+
+rondaInfoDiv.innerText="Ronda "+ronda+" de "+RONDAS_POR_FASE;
+pintarDotsRonda(ronda);
 
 btnFase.disabled=false;
-btnFase.innerText="INICIAR FASE "+faseSiguiente;
+btnFase.innerText=ronda===1 ? "INICIAR FASE "+fase : "CONTINUAR (RONDA "+ronda+")";
 
 }
 
 function mostrarKey(key, expiraTexto){
 
 ocultarTodo();
-
 keyDiv.style.display="block";
 expiraDiv.style.display="block";
 volverBtn.style.display="inline-block";
@@ -397,8 +495,13 @@ const url=new URL(window.location.href);
 url.search="";
 window.history.replaceState({}, "", url.toString());
 
+estadoActual=null;
 ocultarTodo();
 botones.style.display="flex";
+document.querySelectorAll(".botones .btn").forEach(b=>{
+b.disabled=false;
+b.innerText=b.dataset.horas+" HORAS";
+});
 keyDiv.innerText="";
 expiraDiv.innerHTML="";
 
@@ -416,30 +519,42 @@ estadoDiv.innerText="✔ Key copiada al portapapeles";
 async function acortarConCuty(urlLarga){
 
 const apiUrl="https://cuty.io/api?api="+CUTY_API_KEY+"&url="+encodeURIComponent(urlLarga)+"&format=text";
-
 const respuesta=await fetch(apiUrl);
 const texto=await respuesta.text();
-
 return texto.trim();
 
 }
 
-async function irAFase(key,horas,expiraTexto,fase,total){
+function calcularSiguienteEstado(fase,ronda,total){
 
-const urlRetorno=PAGINA_BASE
-+"?key="+encodeURIComponent(key)
-+"&horas="+horas
-+"&expira="+encodeURIComponent(expiraTexto)
-+"&fase="+fase
-+"&total="+total;
+if(ronda<RONDAS_POR_FASE){
+return { fase, ronda:ronda+1, done:false };
+}
 
+if(fase<total){
+return { fase:fase+1, ronda:1, done:false };
+}
+
+return { fase, ronda, done:true };
+
+}
+
+async function irACuty(base,estadoSiguiente){
+
+const nuevoEstado={ ...base, ...estadoSiguiente };
+
+// El progreso real queda guardado en Firebase ANTES de mandar al usuario a cuty.io,
+// así el token que vuelve solo es válido si coincide con lo que quedó registrado.
+await guardarProgreso(nuevoEstado.key, nuevoEstado.fase, nuevoEstado.ronda, nuevoEstado.done);
+
+const token=await crearToken(nuevoEstado);
+const urlRetorno=PAGINA_BASE+"?t="+encodeURIComponent(token);
 const enlaceCorto=await acortarConCuty(urlRetorno);
 
 window.location.href=enlaceCorto;
 
 }
 
-// Botones iniciales para elegir duración
 document.querySelectorAll(".botones .btn").forEach(btn=>{
 
 btn.addEventListener("click", async ()=>{
@@ -448,13 +563,11 @@ const horas=parseInt(btn.dataset.horas);
 const total=FASES_POR_HORA[horas];
 
 document.querySelectorAll(".botones .btn").forEach(b=> b.disabled=true );
-btn.innerHTML="<span class='spinner'></span> Generando...";
+btn.innerHTML="<span class='spinner'></span> Preparando...";
 
 const key=generarKey();
-
 const ahora=new Date();
 const fechaExpira=new Date(ahora.getTime() + (horas*60*60*1000));
-
 const expiraTexto=formatearFecha(fechaExpira);
 const expiraTimestamp=fechaExpira.getTime();
 
@@ -466,7 +579,17 @@ expira:expiraTexto,
 expiraTimestamp:expiraTimestamp
 });
 
-await irAFase(key,horas,expiraTexto,1,total);
+await guardarProgreso(key,1,1,false);
+
+estadoActual={ key, horas, expira:expiraTexto, fase:1, ronda:1, done:false };
+
+const url=new URL(window.location.href);
+url.search="";
+const token=await crearToken(estadoActual);
+url.searchParams.set("t", token);
+window.history.replaceState({}, "", url.toString());
+
+mostrarPantallaFase(1,1,total);
 
 }catch(e){
 
@@ -480,54 +603,73 @@ estadoDiv.innerText="✘ Error al generar la key";
 
 });
 
-// Botón para avanzar a la siguiente fase
 btnFase.addEventListener("click", async ()=>{
 
-const params=new URLSearchParams(window.location.search);
-const key=params.get("key");
-const horas=params.get("horas");
-const expira=params.get("expira");
-const fase=parseInt(params.get("fase"));
-const total=parseInt(params.get("total"));
+if(!estadoActual){
+mostrarError("Sesión inválida, genera una key de nuevo.");
+return;
+}
+
+const total=FASES_POR_HORA[estadoActual.horas];
 
 btnFase.disabled=true;
 btnFase.innerHTML="<span class='spinner'></span> Redirigiendo...";
 
 try{
 
-await irAFase(key,horas,decodeURIComponent(expira),fase+1,total);
+const siguiente=calcularSiguienteEstado(estadoActual.fase, estadoActual.ronda, total);
+await irACuty(estadoActual, siguiente);
 
 }catch(e){
 
 btnFase.disabled=false;
-btnFase.innerText="INICIAR FASE "+(fase+1);
+btnFase.innerText=estadoActual.ronda===1 ? "INICIAR FASE "+estadoActual.fase : "CONTINUAR (RONDA "+estadoActual.ronda+")";
 estadoDiv.innerText="✘ Error al continuar, inténtalo de nuevo";
 
 }
 
 });
 
-// Al cargar la página, revisamos en qué punto del flujo estamos
-window.addEventListener("DOMContentLoaded", ()=>{
+window.addEventListener("DOMContentLoaded", async ()=>{
 
 const params=new URLSearchParams(window.location.search);
-const key=params.get("key");
-const horas=params.get("horas");
-const expira=params.get("expira");
-const fase=parseInt(params.get("fase"));
-const total=parseInt(params.get("total"));
+const token=params.get("t");
 
-if(key && horas && expira && fase && total){
+if(!token){
+return;
+}
 
-if(fase<total){
+const estado=await leerToken(token);
 
-mostrarPantallaFase(fase+1, total);
+if(!estado){
+mostrarError("Enlace inválido o alterado. Genera una key nuevamente.");
+return;
+}
+
+// El estado del token SIEMPRE se contrasta contra lo guardado en Firebase.
+// Si alguien edita la URL o reenvía un token viejo, esto no va a coincidir.
+const progresoReal=await leerProgreso(estado.key);
+
+if(!progresoReal
+|| progresoReal.fase!==estado.fase
+|| progresoReal.ronda!==estado.ronda
+|| !!progresoReal.done!==!!estado.done){
+
+mostrarError("Este enlace ya no es válido. Genera una key nuevamente.");
+return;
+
+}
+
+estadoActual=estado;
+const total=FASES_POR_HORA[estado.horas];
+
+if(estado.done){
+
+mostrarKey(estado.key, estado.expira);
 
 }else{
 
-mostrarKey(key, decodeURIComponent(expira));
-
-}
+mostrarPantallaFase(estado.fase, estado.ronda, total);
 
 }
 
