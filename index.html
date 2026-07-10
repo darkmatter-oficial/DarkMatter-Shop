@@ -361,8 +361,7 @@ import {
 getDatabase,
 ref,
 set,
-get,
-update
+get
 }
 from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
@@ -518,33 +517,27 @@ return null;
 
 }
 
-// --- Finalización de la key (ÚNICO punto donde se escribe en Firebase) ---
+// --- Finalización de la key (ÚNICO punto donde se escribe la key en Firebase) ---
+// La key ahora SOLO guarda su timestamp de expiración, nada más.
+// La existencia de "expira" es lo que indica que la key ya fue finalizada.
 // Nada se guarda en la base de datos durante las fases intermedias: el
 // progreso solo vive dentro del token firmado (con expiración de 20 min).
-// Así, generar una key o pasar de fase en fase NO crea ni modifica nada en
-// Firebase, y no se puede "spamear" la base de datos sin completar el ciclo.
-// Es idempotente: si ya estaba finalizada, no vuelve a escribir nada
-// (así no se puede "recargar" el bloqueo revisitando el mismo link).
 async function finalizarKeySiNecesario(key,horas,ipHash){
 
-const yaSnap=await get(ref(db,"KEYS/"+key+"/finalizado"));
-
-if(yaSnap.exists() && yaSnap.val()===true){
-
 const expiraSnap=await get(ref(db,"KEYS/"+key+"/expira"));
+
+if(expiraSnap.exists()){
+
 return expiraSnap.val();
 
 }
 
 const expiraTimestamp=Date.now()+(horas*60*60*1000);
 
-await update(ref(db,"KEYS/"+key), {
-ipHash,
-expira: expiraTimestamp,
-finalizado: true
-});
+await set(ref(db,"KEYS/"+key+"/expira"), expiraTimestamp);
 
 // El bloqueo por IP recién se activa AQUÍ, cuando la key ya está lista.
+// Vive aparte, en IPS/{ipHash}, no dentro de la key.
 await guardarBloqueo(ipHash, expiraTimestamp);
 
 return expiraTimestamp;
@@ -737,7 +730,7 @@ return urlActual;
 
 }
 
-// Ya NO escribe nada en Firebase: el siguiente estado (fase o done) se
+// No escribe nada en Firebase: el siguiente estado (fase o done) se
 // codifica y firma únicamente en el token de la URL de destino.
 async function irACutyFase(estadoBase, faseSiguiente, total, done){
 
@@ -788,7 +781,7 @@ try{
 
 // Nada se escribe en Firebase aquí. El estado (key, horas, fase 1,
 // done:false) solo existe en memoria y, al pasar de pantalla, en el
-// token firmado de la URL. La key no "existe" para la base de datos
+// token firmado de la URL. La key no "existe" en la base de datos
 // hasta que se completa la última fase.
 estadoActual={ key, horas, ip: ipHashActual, fase:1, done:false };
 
@@ -863,9 +856,6 @@ procesando=false;
 
 // Revisa token en la URL (continuación de fases) o, si no hay token,
 // revisa si la IP está bloqueada para decidir qué mostrar.
-// La validación de fase intermedia ya NO consulta Firebase: el token
-// firmado (con expiración de 20 min) es la única fuente de verdad hasta
-// que se llega a done:true, momento en el que sí se toca la base de datos.
 async function revisarEstadoInicial(){
 
 const params=new URLSearchParams(window.location.search);
@@ -892,7 +882,7 @@ const total=FASES_POR_HORA[estado.horas];
 if(estado.done){
 
 // Recién aquí, al haber terminado todas las fases, se finaliza la key
-// (se guarda su IP + timestamp de expiración) y se activa el bloqueo.
+// (se guarda solo su expira) y se activa el bloqueo por IP aparte.
 const expiraTimestamp=await finalizarKeySiNecesario(estado.key, estado.horas, ipHashActual);
 mostrarKey(estado.key, expiraTimestamp);
 
