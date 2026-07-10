@@ -1,3 +1,358 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>DarkMatter Key Generator</title>
+
+<style>
+*{
+    box-sizing:border-box;
+}
+
+body{
+    margin:0;
+    min-height:100vh;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    background:radial-gradient(circle at top, #1e0530, #0a0010 70%);
+    font-family:'Segoe UI', Arial, sans-serif;
+    padding:20px;
+}
+
+.card{
+    width:100%;
+    max-width:430px;
+    background:linear-gradient(160deg,#22093a,#170428);
+    border:1px solid #a855f7;
+    border-radius:26px;
+    padding:42px 34px;
+    text-align:center;
+    color:white;
+    box-shadow:0 0 70px rgba(139,92,246,0.35), inset 0 0 30px rgba(168,85,247,0.06);
+    animation:fadeIn 0.5s ease;
+    position:relative;
+    overflow:hidden;
+}
+
+.card::before{
+    content:"";
+    position:absolute;
+    top:-60%;
+    left:-60%;
+    width:220%;
+    height:220%;
+    background:conic-gradient(from 0deg, transparent, rgba(168,85,247,0.08), transparent 30%);
+    animation:girar 8s linear infinite;
+    pointer-events:none;
+}
+
+@keyframes girar{
+    to{transform:rotate(360deg);}
+}
+
+@keyframes fadeIn{
+    from{opacity:0; transform:translateY(10px);}
+    to{opacity:1; transform:translateY(0);}
+}
+
+h1{
+    color:#d8b4fe;
+    letter-spacing:6px;
+    font-size:32px;
+    margin:0 0 6px 0;
+    text-shadow:0 0 20px #a855f7;
+    position:relative;
+}
+
+.subtitulo{
+    color:#8b5cf6;
+    font-size:14px;
+    margin-bottom:8px;
+    letter-spacing:1.5px;
+    position:relative;
+}
+
+.ip-info{
+    color:#6d28d9;
+    font-size:11px;
+    margin-bottom:30px;
+    letter-spacing:0.5px;
+    position:relative;
+}
+
+.botones{
+    display:flex;
+    flex-direction:column;
+    gap:14px;
+    position:relative;
+}
+
+.btn{
+    width:100%;
+    background:#2b0a47;
+    border:1px solid #7c3aed;
+    color:#e9d5ff;
+    padding:18px;
+    border-radius:14px;
+    font-size:16px;
+    font-weight:600;
+    letter-spacing:1px;
+    cursor:pointer;
+    transition:all 0.25s ease;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:10px;
+}
+
+.btn:hover{
+    background:#a855f7;
+    color:#170428;
+    box-shadow:0 0 20px #a855f7;
+    transform:translateY(-2px);
+}
+
+.btn:active{
+    transform:translateY(0);
+}
+
+.btn:disabled{
+    opacity:0.6;
+    cursor:not-allowed;
+    transform:none;
+}
+
+.fase-info{
+    background:#170428;
+    border:1px solid #7c3aed;
+    border-radius:16px;
+    padding:26px 18px;
+    margin-top:6px;
+    display:none;
+    position:relative;
+}
+
+.fase-titulo{
+    color:#c084fc;
+    font-size:14px;
+    letter-spacing:1px;
+    margin-bottom:4px;
+}
+
+.fase-progreso{
+    color:#facc15;
+    font-size:22px;
+    font-weight:bold;
+    margin-bottom:6px;
+}
+
+.fase-nota{
+    color:#a855f7;
+    font-size:12.5px;
+    margin-bottom:18px;
+    letter-spacing:0.5px;
+}
+
+.dots{
+    display:flex;
+    justify-content:center;
+    gap:8px;
+    margin-bottom:20px;
+}
+
+.dot{
+    width:12px;
+    height:12px;
+    border-radius:50%;
+    background:#3b0764;
+    border:1px solid #7c3aed;
+}
+
+.dot.activo{
+    background:#a855f7;
+    box-shadow:0 0 10px #a855f7;
+}
+
+.key{
+    background:#170428;
+    border:1px solid #7c3aed;
+    border-radius:16px;
+    padding:22px;
+    margin-top:26px;
+    font-size:23px;
+    font-weight:bold;
+    color:#d8b4fe;
+    letter-spacing:1px;
+    display:none;
+    word-break:break-all;
+    box-shadow:inset 0 0 15px rgba(168,85,247,0.2);
+    position:relative;
+}
+
+.expira{
+    margin-top:16px;
+    color:#facc15;
+    font-size:14px;
+    display:none;
+    line-height:1.6;
+    position:relative;
+}
+
+.expira b{
+    color:#fde047;
+}
+
+.estado{
+    margin-top:18px;
+    font-size:14px;
+    font-weight:600;
+    color:#7ee787;
+    min-height:20px;
+    position:relative;
+}
+
+.estado.error{
+    color:#f87171;
+}
+
+.btn-volver{
+    margin-top:26px;
+    background:none;
+    border:none;
+    color:#a855f7;
+    font-size:13px;
+    text-decoration:underline;
+    cursor:pointer;
+    display:none;
+    position:relative;
+}
+
+.btn-volver:hover{
+    color:#d8b4fe;
+}
+
+.btn-copiar{
+    width:100%;
+    margin-top:16px;
+    background:#3b0764;
+    border:1px solid #a855f7;
+    color:#e9d5ff;
+    padding:12px 18px;
+    border-radius:10px;
+    font-size:13px;
+    cursor:pointer;
+    display:none;
+    position:relative;
+}
+
+.btn-copiar:hover{
+    background:#a855f7;
+    color:#170428;
+}
+
+.bloqueado{
+    display:none;
+    position:relative;
+}
+
+.bloqueado-icono{
+    font-size:38px;
+    margin-bottom:10px;
+}
+
+.bloqueado-titulo{
+    color:#f87171;
+    font-size:16px;
+    font-weight:700;
+    letter-spacing:1px;
+    margin-bottom:6px;
+}
+
+.bloqueado-texto{
+    color:#c4b5fd;
+    font-size:13px;
+    margin-bottom:22px;
+    line-height:1.5;
+}
+
+.contador{
+    background:#170428;
+    border:1px solid #f87171;
+    border-radius:16px;
+    padding:20px;
+    font-size:30px;
+    font-weight:bold;
+    letter-spacing:2px;
+    color:#fca5a5;
+    box-shadow:inset 0 0 15px rgba(248,113,113,0.15);
+}
+
+.contador-label{
+    color:#8b5cf6;
+    font-size:11px;
+    margin-top:10px;
+    letter-spacing:1px;
+}
+
+.spinner{
+    display:inline-block;
+    width:16px;
+    height:16px;
+    border:2px solid #a855f7;
+    border-top:2px solid transparent;
+    border-radius:50%;
+    animation:spin 0.7s linear infinite;
+    vertical-align:middle;
+}
+
+@keyframes spin{
+    to{transform:rotate(360deg);}
+}
+</style>
+</head>
+<body>
+
+<div class="card">
+<h1>DARKMATTER</h1>
+<div class="subtitulo">GENERADOR DE KEYS</div>
+<div class="ip-info" id="ipInfo">Verificando conexión...</div>
+
+<div class="botones" id="botones">
+<button class="btn" data-horas="2">⏱ KEY 2 HORAS</button>
+<button class="btn" data-horas="5">⏱ KEY 5 HORAS</button>
+<button class="btn" data-horas="8">⏱ KEY 8 HORAS</button>
+</div>
+
+<div class="bloqueado" id="bloqueado">
+<div class="bloqueado-icono">🔒</div>
+<div class="bloqueado-titulo">TODAVÍA NO PUEDES GENERAR</div>
+<div class="bloqueado-texto">Ya tienes una key activa. Podrás pedir otra (de cualquier duración) cuando termine el tiempo restante:</div>
+<div class="contador" id="contador">00:00:00</div>
+<div class="contador-label">HORAS : MINUTOS : SEGUNDOS</div>
+</div>
+
+<div class="fase-info" id="faseInfo">
+<div class="fase-titulo">DEBES COMPLETAR TODAS LAS FASES</div>
+<div class="fase-progreso" id="faseProgreso">Fase 1 de 3</div>
+<div class="fase-nota">Esta fase incluye 3 anuncios seguidos</div>
+<div class="dots" id="dots"></div>
+<button class="btn" id="btnFase">INICIAR FASE 1</button>
+</div>
+
+<div class="key" id="key"></div>
+
+<div class="expira" id="expira"></div>
+
+<div class="estado" id="estado"></div>
+
+<button class="btn-copiar" id="copiar">📋 Copiar key</button>
+
+<button class="btn-volver" id="volver">← Volver</button>
+
+</div>
+
 <script type="module">
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
@@ -7,7 +362,7 @@ getDatabase,
 ref,
 set,
 get,
-runTransaction
+update
 }
 from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
 
@@ -28,8 +383,7 @@ const CUTY_API_KEY="0a4fb7e2e5e7b96961905bbc5";
 
 const PAGINA_BASE="https://darkmatter-oficial.github.io/DarkMatter-Shop/";
 
-// Sal usada SOLO para firmar el token (verificar que no fue alterado).
-// Ya no se usa para ocultar la IP, porque ahora se guarda en texto plano.
+// Sal usada para firmar y hashear (cámbiala por una tuya, larga y única)
 const SAL_FIRMA="dm-2026-cambia-esta-sal-por-una-tuya-larga-y-unica";
 
 const FASES_POR_HORA={ 2:1, 5:2, 8:3 };
@@ -42,12 +396,9 @@ const TOKEN_MAX_EDAD_MS=20*60*1000; // 20 minutos
 function generarKey(){
 
 const letras="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-const valoresAleatorios=new Uint32Array(10);
-crypto.getRandomValues(valoresAleatorios);
-
 let texto="DM_";
 for(let i=0;i<10;i++){
-texto+=letras[valoresAleatorios[i]%letras.length];
+texto+=letras[Math.floor(Math.random()*letras.length)];
 }
 return texto;
 
@@ -83,7 +434,7 @@ return h+":"+m+":"+s;
 
 }
 
-// --- IP del usuario (se usa tal cual, sin hash ni cifrado) ---
+// --- IP del usuario ---
 
 async function obtenerIP(){
 
@@ -108,9 +459,15 @@ return Array.from(new Uint8Array(buffer)).map(b=>b.toString(16).padStart(2,"0"))
 
 }
 
+// La IP nunca se guarda en texto plano: se guarda un hash con sal,
+// tanto en Firebase como dentro del token.
+async function hashIP(ip){
+
+return await sha256Hex("ip:"+ip+":"+SAL_FIRMA);
+
+}
+
 // --- Firma y validez temporal del token de estado ---
-// El token sigue firmado para que nadie pueda alterar la fase o la IP que
-// lleva dentro, pero ahora transporta la IP en texto plano (no un hash).
 
 async function crearToken(estado){
 
@@ -151,19 +508,6 @@ if(!FASES_POR_HORA[estado.horas]){
 return null;
 }
 
-const totalFases=FASES_POR_HORA[estado.horas];
-if(!Number.isInteger(estado.fase) || estado.fase<1 || estado.fase>totalFases){
-return null;
-}
-
-if(typeof estado.key!=="string" || estado.key.length<5){
-return null;
-}
-
-if(typeof estado.ip!=="string" || estado.ip.length<3){
-return null;
-}
-
 return estado;
 
 }catch(e){
@@ -174,60 +518,51 @@ return null;
 
 }
 
-// --- Finaliza la key SOLO cuando se completaron todas las fases y rondas ---
-// El nodo KEYS/{key} en Firebase termina con EXACTAMENTE dos campos: ip y
-// expira. Nada de hash, nada de flags extra.
-//
-// Para seguir siendo idempotente (que reabrir el mismo link final no
-// vuelva a bloquear ni a pisar la key), la transacción usa como criterio
-// "¿ya existe expira guardado?" en vez de un campo finalizado aparte.
+// --- Finalización de la key (ÚNICO punto donde se escribe en Firebase) ---
+// Nada se guarda en la base de datos durante las fases intermedias: el
+// progreso solo vive dentro del token firmado (con expiración de 20 min).
+// Así, generar una key o pasar de fase en fase NO crea ni modifica nada en
+// Firebase, y no se puede "spamear" la base de datos sin completar el ciclo.
+// Es idempotente: si ya estaba finalizada, no vuelve a escribir nada
+// (así no se puede "recargar" el bloqueo revisitando el mismo link).
+async function finalizarKeySiNecesario(key,horas,ipHash){
 
-async function finalizarKeySiNecesario(key,horas,ip){
+const yaSnap=await get(ref(db,"KEYS/"+key+"/finalizado"));
+
+if(yaSnap.exists() && yaSnap.val()===true){
+
+const expiraSnap=await get(ref(db,"KEYS/"+key+"/expira"));
+return expiraSnap.val();
+
+}
 
 const expiraTimestamp=Date.now()+(horas*60*60*1000);
-const nodeRef=ref(db,"KEYS/"+key);
 
-const resultado=await runTransaction(nodeRef,(actual)=>{
-
-if(actual && actual.expira){
-// Ya estaba finalizada por otro intento/pestaña: no tocar nada
-return;
-}
-
-return {
-ip,
-expira: expiraTimestamp
-};
-
+await update(ref(db,"KEYS/"+key), {
+ipHash,
+expira: expiraTimestamp,
+finalizado: true
 });
 
-if(resultado.committed){
+// El bloqueo por IP recién se activa AQUÍ, cuando la key ya está lista.
+await guardarBloqueo(ipHash, expiraTimestamp);
 
-// Esta ejecución fue la que finalizó la key de verdad:
-// recién aquí se activa el bloqueo por IP.
-await guardarBloqueo(ip, expiraTimestamp);
 return expiraTimestamp;
-
-}
-
-// Ya estaba finalizada antes: devolvemos su expiración real
-const datos=resultado.snapshot.val();
-return datos ? datos.expira : expiraTimestamp;
 
 }
 
 // --- Bloqueo por IP (cooldown entre keys, solo tras completar una) ---
 
-async function leerBloqueo(ip){
+async function leerBloqueo(ipHash){
 
-const snap=await get(ref(db,"IPS/"+ip));
+const snap=await get(ref(db,"IPS/"+ipHash));
 return snap.exists() ? snap.val() : null;
 
 }
 
-async function guardarBloqueo(ip, bloqueadoHasta){
+async function guardarBloqueo(ipHash, bloqueadoHasta){
 
-await set(ref(db,"IPS/"+ip), { bloqueadoHasta });
+await set(ref(db,"IPS/"+ipHash), { bloqueadoHasta });
 
 }
 
@@ -247,6 +582,7 @@ const copiarBtn=document.getElementById("copiar");
 
 let estadoActual=null;
 let ipActual=null;
+let ipHashActual=null;
 let intervaloContador=null;
 let procesando=false;
 
@@ -381,23 +717,14 @@ estadoDiv.innerText="✔ Key copiada al portapapeles";
 async function acortarConCuty(urlLarga){
 
 const apiUrl="https://cuty.io/api?api="+CUTY_API_KEY+"&url="+encodeURIComponent(urlLarga)+"&format=text";
-
 const respuesta=await fetch(apiUrl);
-
-if(!respuesta.ok){
-throw new Error("cuty.io respondió con error "+respuesta.status);
-}
-
-const texto=(await respuesta.text()).trim();
-
-if(!texto || !texto.startsWith("http")){
-throw new Error("cuty.io devolvió una respuesta inválida");
-}
-
-return texto;
+const texto=await respuesta.text();
+return texto.trim();
 
 }
 
+// Construye la cadena de links de cuty.io de atrás hacia adelante para que
+// el usuario pase por RONDAS_POR_FASE anuncios seguidos sin volver a tu página.
 async function construirCadenaCuty(numRondas, urlFinal){
 
 let urlActual=urlFinal;
@@ -410,6 +737,8 @@ return urlActual;
 
 }
 
+// Ya NO escribe nada en Firebase: el siguiente estado (fase o done) se
+// codifica y firma únicamente en el token de la URL de destino.
 async function irACutyFase(estadoBase, faseSiguiente, total, done){
 
 const nuevoEstado={ ...estadoBase, fase: done ? estadoBase.fase : faseSiguiente, done: !!done };
@@ -436,7 +765,7 @@ return;
 }
 
 // Doble chequeo defensivo: revalida el bloqueo justo antes de generar
-const bloqueo=await leerBloqueo(ipActual);
+const bloqueo=await leerBloqueo(ipHashActual);
 
 if(bloqueo && bloqueo.bloqueadoHasta>Date.now()){
 
@@ -453,13 +782,15 @@ const total=FASES_POR_HORA[horas];
 document.querySelectorAll(".botones .btn").forEach(b=> b.disabled=true );
 btn.innerHTML="<span class='spinner'></span> Preparando...";
 
-try{
-
 const key=generarKey();
 
-// No se escribe nada en Firebase todavía. La key solo existe en
-// memoria y dentro del token firmado hasta que se completen las fases.
-estadoActual={ key, horas, ip: ipActual, fase:1, done:false };
+try{
+
+// Nada se escribe en Firebase aquí. El estado (key, horas, fase 1,
+// done:false) solo existe en memoria y, al pasar de pantalla, en el
+// token firmado de la URL. La key no "existe" para la base de datos
+// hasta que se completa la última fase.
+estadoActual={ key, horas, ip: ipHashActual, fase:1, done:false };
 
 const url=new URL(window.location.href);
 url.search="";
@@ -530,6 +861,11 @@ procesando=false;
 
 });
 
+// Revisa token en la URL (continuación de fases) o, si no hay token,
+// revisa si la IP está bloqueada para decidir qué mostrar.
+// La validación de fase intermedia ya NO consulta Firebase: el token
+// firmado (con expiración de 20 min) es la única fuente de verdad hasta
+// que se llega a done:true, momento en el que sí se toca la base de datos.
 async function revisarEstadoInicial(){
 
 const params=new URLSearchParams(window.location.search);
@@ -544,8 +880,8 @@ mostrarError("Enlace inválido, alterado o vencido. Genera una key nuevamente.")
 return;
 }
 
-// La IP dentro del token debe coincidir con la de esta sesión
-if(estado.ip!==ipActual){
+// El hash de IP dentro del token debe coincidir con el de esta sesión
+if(estado.ip!==ipHashActual){
 mostrarError("Este enlace fue generado desde otra conexión y no es válido aquí.");
 return;
 }
@@ -555,9 +891,9 @@ const total=FASES_POR_HORA[estado.horas];
 
 if(estado.done){
 
-// Recién aquí se escribe en Firebase: ip + expira, y se activa
-// el bloqueo. Es la única escritura de todo el flujo.
-const expiraTimestamp=await finalizarKeySiNecesario(estado.key, estado.horas, ipActual);
+// Recién aquí, al haber terminado todas las fases, se finaliza la key
+// (se guarda su IP + timestamp de expiración) y se activa el bloqueo.
+const expiraTimestamp=await finalizarKeySiNecesario(estado.key, estado.horas, ipHashActual);
 mostrarKey(estado.key, expiraTimestamp);
 
 }else{
@@ -570,7 +906,9 @@ return;
 
 }
 
-const bloqueo=await leerBloqueo(ipActual);
+// Sin token: revisamos si la IP tiene un bloqueo activo (solo existe
+// si ya completaste una key alguna vez).
+const bloqueo=await leerBloqueo(ipHashActual);
 
 if(bloqueo && bloqueo.bloqueadoHasta>Date.now()){
 
@@ -596,6 +934,7 @@ return;
 
 }
 
+ipHashActual=await hashIP(ipActual);
 ipInfoDiv.innerText="Conexión verificada";
 
 await revisarEstadoInicial();
@@ -603,3 +942,6 @@ await revisarEstadoInicial();
 });
 
 </script>
+
+</body>
+</html>
