@@ -82,6 +82,7 @@
   }
   button:disabled { background: #3a2d4a; box-shadow: none; cursor: not-allowed; }
   .status { font-size: 13px; color: #c8b8e0; margin-top: 14px; min-height: 18px; }
+  .debug { font-size: 10px; color: #6a5a85; margin-top: 10px; word-break: break-all; }
   .loader {
     border: 3px solid rgba(183,33,255,0.2);
     border-top: 3px solid #b721ff;
@@ -107,11 +108,11 @@
   <a id="backBtn" class="btn2" style="display:none;" href="https://darkmatter-oficial.github.io/DarkMatter-Shop/">Volver a generar</a>
 
   <div id="status" class="status"></div>
+  <div id="debug" class="debug"></div>
   <div class="footer">DarkMatter © 2026</div>
 </div>
 
 <script>
-  // URL base de tu Firebase Realtime Database
   const DB_URL = "https://darkmatter-68e65-default-rtdb.firebaseio.com";
 
   const DURACION_HORAS = 24;
@@ -127,21 +128,31 @@
 
   async function obtenerIP() {
     const res = await fetch("https://api.ipify.org?format=json");
+    if (!res.ok) throw new Error("No se pudo obtener la IP");
     const data = await res.json();
-    return data.ip.replace(/\./g, "_"); // Firebase no permite puntos en las keys
+    return data.ip.replace(/\./g, "_");
   }
 
-  // Helpers REST API de Firebase
+  // Helpers REST API de Firebase, ahora con chequeo de errores real
   async function dbGet(path) {
     const res = await fetch(`${DB_URL}/${path}.json`);
-    return res.json();
+    const data = await res.json();
+    if (!res.ok || (data && data.error)) {
+      throw new Error("Firebase: " + (data && data.error ? data.error : res.status));
+    }
+    return data;
   }
   async function dbSet(path, value) {
-    await fetch(`${DB_URL}/${path}.json`, {
+    const res = await fetch(`${DB_URL}/${path}.json`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(value)
     });
+    const data = await res.json();
+    if (!res.ok || (data && data.error)) {
+      throw new Error("Firebase: " + (data && data.error ? data.error : res.status));
+    }
+    return data;
   }
 
   async function iniciar() {
@@ -149,8 +160,8 @@
     const sub = document.getElementById("subText");
     const loader = document.getElementById("loader");
     const backBtn = document.getElementById("backBtn");
+    const debug = document.getElementById("debug");
 
-    // 1. Verificar que venga de BlackLink
     if (!document.referrer.includes(REFERRER_VALIDO)) {
       loader.style.display = "none";
       sub.textContent = "Acceso no válido.";
@@ -163,7 +174,6 @@
       const ip = await obtenerIP();
       const ahora = Date.now();
 
-      // 2. Chequear cooldown
       const cooldown = await dbGet(`COOLDOWNS/${ip}`);
       if (cooldown && cooldown.timestamp) {
         const restante = (cooldown.timestamp + COOLDOWN_HORAS * 3600 * 1000) - ahora;
@@ -177,9 +187,10 @@
         }
       }
 
-      // 3. Generar key única
-      let key, existe = true;
+      let key, existe = true, intentos = 0;
       while (existe) {
+        intentos++;
+        if (intentos > 15) throw new Error("No se pudo generar una key única, intentá de nuevo");
         key = generarKey();
         const check = await dbGet(`KEYS/${key}`);
         existe = check !== null;
@@ -199,7 +210,9 @@
 
     } catch (err) {
       loader.style.display = "none";
-      status.textContent = "Error al generar la key. Intentá de nuevo.";
+      sub.textContent = "Ocurrió un error.";
+      status.textContent = "Tocá para reintentar.";
+      debug.textContent = err.message;
       backBtn.style.display = "block";
       console.error(err);
     }
