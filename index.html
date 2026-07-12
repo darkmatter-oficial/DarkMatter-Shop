@@ -4,8 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>DM Key Sistem</title>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body {
@@ -113,14 +111,8 @@
 </div>
 
 <script>
-  // ⚠️ Reemplazá con la config real de tu proyecto Firebase
-  const firebaseConfig = {
-    apiKey: "TU_API_KEY",
-    databaseURL: "https://TU_PROYECTO.firebaseio.com",
-    projectId: "TU_PROYECTO"
-  };
-  firebase.initializeApp(firebaseConfig);
-  const db = firebase.database();
+  // URL base de tu Firebase Realtime Database
+  const DB_URL = "https://darkmatter-68e65-default-rtdb.firebaseio.com";
 
   const DURACION_HORAS = 24;
   const COOLDOWN_HORAS = 24;
@@ -136,7 +128,20 @@
   async function obtenerIP() {
     const res = await fetch("https://api.ipify.org?format=json");
     const data = await res.json();
-    return data.ip.replace(/\./g, "_");
+    return data.ip.replace(/\./g, "_"); // Firebase no permite puntos en las keys
+  }
+
+  // Helpers REST API de Firebase
+  async function dbGet(path) {
+    const res = await fetch(`${DB_URL}/${path}.json`);
+    return res.json();
+  }
+  async function dbSet(path, value) {
+    await fetch(`${DB_URL}/${path}.json`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(value)
+    });
   }
 
   async function iniciar() {
@@ -156,13 +161,12 @@
 
     try {
       const ip = await obtenerIP();
-      const cooldownRef = db.ref("COOLDOWNS/" + ip);
-      const snap = await cooldownRef.once("value");
       const ahora = Date.now();
 
-      if (snap.exists()) {
-        const ultima = snap.val().timestamp;
-        const restante = (ultima + COOLDOWN_HORAS * 3600 * 1000) - ahora;
+      // 2. Chequear cooldown
+      const cooldown = await dbGet(`COOLDOWNS/${ip}`);
+      if (cooldown && cooldown.timestamp) {
+        const restante = (cooldown.timestamp + COOLDOWN_HORAS * 3600 * 1000) - ahora;
         if (restante > 0) {
           loader.style.display = "none";
           const horas = Math.ceil(restante / 3600000);
@@ -173,16 +177,17 @@
         }
       }
 
+      // 3. Generar key única
       let key, existe = true;
       while (existe) {
         key = generarKey();
-        const check = await db.ref("KEYS/" + key).once("value");
-        existe = check.exists();
+        const check = await dbGet(`KEYS/${key}`);
+        existe = check !== null;
       }
 
       const expira = ahora + DURACION_HORAS * 3600 * 1000;
-      await db.ref("KEYS/" + key).set({ expira: expira });
-      await cooldownRef.set({ timestamp: ahora });
+      await dbSet(`KEYS/${key}`, { expira: expira });
+      await dbSet(`COOLDOWNS/${ip}`, { timestamp: ahora });
 
       loader.style.display = "none";
       sub.textContent = "¡Key generada con éxito!";
