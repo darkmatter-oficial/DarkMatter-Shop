@@ -2,935 +2,211 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
-<title>DarkMatter Key Generator</title>
-
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DM Key Sistem</title>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 <style>
-*{
-    box-sizing:border-box;
-}
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', sans-serif;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    background: radial-gradient(circle at 20% 20%, #2d0a4e, #0a0512 70%);
+    color: #fff;
+    overflow: hidden;
+    position: relative;
+  }
+  body::before, body::after {
+    content: "";
+    position: absolute;
+    width: 400px;
+    height: 400px;
+    border-radius: 50%;
+    filter: blur(100px);
+    z-index: 0;
+  }
+  body::before { background: #7b2ff7; top: -100px; left: -100px; opacity: 0.4; }
+  body::after { background: #b721ff; bottom: -120px; right: -100px; opacity: 0.35; }
 
-body{
-    margin:0;
-    min-height:100vh;
-    display:flex;
-    justify-content:center;
-    align-items:center;
-    background:radial-gradient(circle at top, #1e0530, #0a0010 70%);
-    font-family:'Segoe UI', Arial, sans-serif;
-    padding:20px;
-}
-
-.card{
-    width:100%;
-    max-width:430px;
-    background:linear-gradient(160deg,#22093a,#170428);
-    border:1px solid #a855f7;
-    border-radius:26px;
-    padding:42px 34px;
-    text-align:center;
-    color:white;
-    box-shadow:0 0 70px rgba(139,92,246,0.35), inset 0 0 30px rgba(168,85,247,0.06);
-    animation:fadeIn 0.5s ease;
-    position:relative;
-    overflow:hidden;
-}
-
-.card::before{
-    content:"";
-    position:absolute;
-    top:-60%;
-    left:-60%;
-    width:220%;
-    height:220%;
-    background:conic-gradient(from 0deg, transparent, rgba(168,85,247,0.08), transparent 30%);
-    animation:girar 8s linear infinite;
-    pointer-events:none;
-}
-
-@keyframes girar{
-    to{transform:rotate(360deg);}
-}
-
-@keyframes fadeIn{
-    from{opacity:0; transform:translateY(10px);}
-    to{opacity:1; transform:translateY(0);}
-}
-
-h1{
-    color:#d8b4fe;
-    letter-spacing:6px;
-    font-size:32px;
-    margin:0 0 6px 0;
-    text-shadow:0 0 20px #a855f7;
-    position:relative;
-}
-
-.subtitulo{
-    color:#8b5cf6;
-    font-size:14px;
-    margin-bottom:8px;
-    letter-spacing:1.5px;
-    position:relative;
-}
-
-.ip-info{
-    color:#6d28d9;
-    font-size:11px;
-    margin-bottom:30px;
-    letter-spacing:0.5px;
-    position:relative;
-}
-
-.botones{
-    display:flex;
-    flex-direction:column;
-    gap:14px;
-    position:relative;
-}
-
-.btn{
-    width:100%;
-    background:#2b0a47;
-    border:1px solid #7c3aed;
-    color:#e9d5ff;
-    padding:18px;
-    border-radius:14px;
-    font-size:16px;
-    font-weight:600;
-    letter-spacing:1px;
-    cursor:pointer;
-    transition:all 0.25s ease;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    gap:10px;
-}
-
-.btn:hover{
-    background:#a855f7;
-    color:#170428;
-    box-shadow:0 0 20px #a855f7;
-    transform:translateY(-2px);
-}
-
-.btn:active{
-    transform:translateY(0);
-}
-
-.btn:disabled{
-    opacity:0.6;
-    cursor:not-allowed;
-    transform:none;
-}
-
-.fase-info{
-    background:#170428;
-    border:1px solid #7c3aed;
-    border-radius:16px;
-    padding:26px 18px;
-    margin-top:6px;
-    display:none;
-    position:relative;
-}
-
-.fase-titulo{
-    color:#c084fc;
-    font-size:14px;
-    letter-spacing:1px;
-    margin-bottom:4px;
-}
-
-.fase-progreso{
-    color:#facc15;
-    font-size:22px;
-    font-weight:bold;
-    margin-bottom:6px;
-}
-
-.fase-nota{
-    color:#a855f7;
-    font-size:12.5px;
-    margin-bottom:18px;
-    letter-spacing:0.5px;
-}
-
-.dots{
-    display:flex;
-    justify-content:center;
-    gap:8px;
-    margin-bottom:20px;
-}
-
-.dot{
-    width:12px;
-    height:12px;
-    border-radius:50%;
-    background:#3b0764;
-    border:1px solid #7c3aed;
-}
-
-.dot.activo{
-    background:#a855f7;
-    box-shadow:0 0 10px #a855f7;
-}
-
-.key{
-    background:#170428;
-    border:1px solid #7c3aed;
-    border-radius:16px;
-    padding:22px;
-    margin-top:26px;
-    font-size:23px;
-    font-weight:bold;
-    color:#d8b4fe;
-    letter-spacing:1px;
-    display:none;
-    word-break:break-all;
-    box-shadow:inset 0 0 15px rgba(168,85,247,0.2);
-    position:relative;
-}
-
-.expira{
-    margin-top:16px;
-    color:#facc15;
-    font-size:14px;
-    display:none;
-    line-height:1.6;
-    position:relative;
-}
-
-.expira b{
-    color:#fde047;
-}
-
-.estado{
-    margin-top:18px;
-    font-size:14px;
-    font-weight:600;
-    color:#7ee787;
-    min-height:20px;
-    position:relative;
-}
-
-.estado.error{
-    color:#f87171;
-}
-
-.btn-volver{
-    margin-top:26px;
-    background:none;
-    border:none;
-    color:#a855f7;
-    font-size:13px;
-    text-decoration:underline;
-    cursor:pointer;
-    display:none;
-    position:relative;
-}
-
-.btn-volver:hover{
-    color:#d8b4fe;
-}
-
-.btn-copiar{
-    width:100%;
-    margin-top:16px;
-    background:#3b0764;
-    border:1px solid #a855f7;
-    color:#e9d5ff;
-    padding:12px 18px;
-    border-radius:10px;
-    font-size:13px;
-    cursor:pointer;
-    display:none;
-    position:relative;
-}
-
-.btn-copiar:hover{
-    background:#a855f7;
-    color:#170428;
-}
-
-.bloqueado{
-    display:none;
-    position:relative;
-}
-
-.bloqueado-icono{
-    font-size:38px;
-    margin-bottom:10px;
-}
-
-.bloqueado-titulo{
-    color:#f87171;
-    font-size:16px;
-    font-weight:700;
-    letter-spacing:1px;
-    margin-bottom:6px;
-}
-
-.bloqueado-texto{
-    color:#c4b5fd;
-    font-size:13px;
-    margin-bottom:22px;
-    line-height:1.5;
-}
-
-.contador{
-    background:#170428;
-    border:1px solid #f87171;
-    border-radius:16px;
-    padding:20px;
-    font-size:30px;
-    font-weight:bold;
-    letter-spacing:2px;
-    color:#fca5a5;
-    box-shadow:inset 0 0 15px rgba(248,113,113,0.15);
-}
-
-.contador-label{
-    color:#8b5cf6;
-    font-size:11px;
-    margin-top:10px;
-    letter-spacing:1px;
-}
-
-.spinner{
-    display:inline-block;
-    width:16px;
-    height:16px;
-    border:2px solid #a855f7;
-    border-top:2px solid transparent;
-    border-radius:50%;
-    animation:spin 0.7s linear infinite;
-    vertical-align:middle;
-}
-
-@keyframes spin{
-    to{transform:rotate(360deg);}
-}
+  .card {
+    position: relative;
+    z-index: 1;
+    background: rgba(30, 10, 50, 0.55);
+    border: 1px solid rgba(183, 33, 255, 0.35);
+    border-radius: 20px;
+    padding: 36px 30px;
+    max-width: 420px;
+    width: 100%;
+    text-align: center;
+    backdrop-filter: blur(14px);
+    box-shadow: 0 0 60px rgba(183, 33, 255, 0.25);
+  }
+  h1 {
+    font-size: 22px;
+    background: linear-gradient(90deg, #b721ff, #7b2ff7);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    margin-bottom: 6px;
+  }
+  p.sub { color: #c8b8e0; font-size: 14px; margin-bottom: 22px; }
+  .key-box {
+    background: rgba(0,0,0,0.35);
+    border: 1px dashed #b721ff;
+    border-radius: 12px;
+    padding: 16px;
+    font-size: 18px;
+    font-weight: bold;
+    letter-spacing: 1px;
+    word-break: break-all;
+    margin-bottom: 16px;
+    display: none;
+    box-shadow: 0 0 20px rgba(183,33,255,0.2) inset;
+  }
+  button, a.btn2 {
+    display: block;
+    background: linear-gradient(90deg, #7b2ff7, #b721ff);
+    color: #fff;
+    border: none;
+    text-decoration: none;
+    padding: 14px;
+    border-radius: 12px;
+    font-size: 15px;
+    font-weight: bold;
+    cursor: pointer;
+    width: 100%;
+    box-shadow: 0 0 20px rgba(183, 33, 255, 0.4);
+    margin-top: 8px;
+  }
+  button:disabled { background: #3a2d4a; box-shadow: none; cursor: not-allowed; }
+  .status { font-size: 13px; color: #c8b8e0; margin-top: 14px; min-height: 18px; }
+  .loader {
+    border: 3px solid rgba(183,33,255,0.2);
+    border-top: 3px solid #b721ff;
+    border-radius: 50%;
+    width: 30px;
+    height: 30px;
+    animation: spin 0.8s linear infinite;
+    margin: 20px auto;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .footer { margin-top: 20px; font-size: 11px; color: #6a5a85; }
 </style>
 </head>
 <body>
 
 <div class="card">
-<h1>DARKMATTER</h1>
-<div class="subtitulo">GENERADOR DE KEYS</div>
-<div class="ip-info" id="ipInfo">Verificando conexión...</div>
+  <h1>🔮 DM Key Sistem</h1>
+  <p class="sub" id="subText">Verificando acceso...</p>
 
-<div class="botones" id="botones">
-<button class="btn" data-horas="2">⏱ KEY 2 HORAS</button>
-<button class="btn" data-horas="5">⏱ KEY 5 HORAS</button>
-<button class="btn" data-horas="8">⏱ KEY 8 HORAS</button>
+  <div id="loader" class="loader"></div>
+  <div id="keyBox" class="key-box"></div>
+  <button id="copyBtn" style="display:none;" onclick="copiarKey()">Copiar key</button>
+  <a id="backBtn" class="btn2" style="display:none;" href="https://darkmatter-oficial.github.io/DarkMatter-Shop/">Volver a generar</a>
+
+  <div id="status" class="status"></div>
+  <div class="footer">DarkMatter © 2026</div>
 </div>
 
-<div class="bloqueado" id="bloqueado">
-<div class="bloqueado-icono">🔒</div>
-<div class="bloqueado-titulo">TODAVÍA NO PUEDES GENERAR</div>
-<div class="bloqueado-texto">Ya tienes una key activa. Podrás pedir otra (de cualquier duración) cuando termine el tiempo restante:</div>
-<div class="contador" id="contador">00:00:00</div>
-<div class="contador-label">HORAS : MINUTOS : SEGUNDOS</div>
-</div>
-
-<div class="fase-info" id="faseInfo">
-<div class="fase-titulo">DEBES COMPLETAR TODAS LAS FASES</div>
-<div class="fase-progreso" id="faseProgreso">Fase 1 de 3</div>
-<div class="fase-nota">Esta fase incluye 3 anuncios seguidos</div>
-<div class="dots" id="dots"></div>
-<button class="btn" id="btnFase">INICIAR FASE 1</button>
-</div>
-
-<div class="key" id="key"></div>
-
-<div class="expira" id="expira"></div>
-
-<div class="estado" id="estado"></div>
-
-<button class="btn-copiar" id="copiar">📋 Copiar key</button>
-
-<button class="btn-volver" id="volver">← Volver</button>
-
-</div>
-
-<script type="module">
-
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-
-import {
-getDatabase,
-ref,
-set,
-get
-}
-from "https://www.gstatic.com/firebasejs/10.12.2/firebase-database.js";
-
-const firebaseConfig = {
-apiKey:"TU_API_KEY",
-authDomain:"TU_PROYECTO.firebaseapp.com",
-databaseURL:"https://darkmatter-68e65-default-rtdb.firebaseio.com",
-projectId:"TU_PROYECTO",
-storageBucket:"TU_PROYECTO.appspot.com",
-messagingSenderId:"...",
-appId:"..."
-};
-
-const app=initializeApp(firebaseConfig);
-const db=getDatabase(app);
-
-const CUTY_API_KEY="0a4fb7e2e5e7b96961905bbc5";
-
-const PAGINA_BASE="https://darkmatter-oficial.github.io/DarkMatter-Shop/";
-
-// Sal usada para firmar y hashear (cámbiala por una tuya, larga y única)
-const SAL_FIRMA="dm-2026-cambia-esta-sal-por-una-tuya-larga-y-unica";
-
-const FASES_POR_HORA={ 2:1, 5:2, 8:3 };
-const RONDAS_POR_FASE=3;
-
-// Un token de fase (aún no finalizado) deja de ser válido pasado este tiempo,
-// así nadie puede guardar un link a mitad del proceso y usarlo días después.
-const TOKEN_MAX_EDAD_MS=20*60*1000; // 20 minutos
-
-function generarKey(){
-
-const letras="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-let texto="DM_";
-for(let i=0;i<10;i++){
-texto+=letras[Math.floor(Math.random()*letras.length)];
-}
-return texto;
-
-}
-
-function formatearFecha(timestamp){
-
-const fecha=new Date(timestamp);
-const dias=["Domingo","Lunes","Martes","Miércoles","Jueves","Viernes","Sábado"];
-const diaSemana=dias[fecha.getDay()];
-const dia=String(fecha.getDate()).padStart(2,"0");
-const mes=String(fecha.getMonth()+1).padStart(2,"0");
-const anio=fecha.getFullYear();
-let horas=fecha.getHours();
-const minutos=String(fecha.getMinutes()).padStart(2,"0");
-const segundos=String(fecha.getSeconds()).padStart(2,"0");
-const ampm=horas>=12 ? "PM" : "AM";
-horas=horas%12;
-horas=horas ? horas : 12;
-horas=String(horas).padStart(2,"0");
-return `${diaSemana} ${dia}/${mes}/${anio} - ${horas}:${minutos}:${segundos} ${ampm}`;
-
-}
-
-function formatearContador(ms){
-
-if(ms<0) ms=0;
-const totalSeg=Math.floor(ms/1000);
-const h=String(Math.floor(totalSeg/3600)).padStart(2,"0");
-const m=String(Math.floor((totalSeg%3600)/60)).padStart(2,"0");
-const s=String(totalSeg%60).padStart(2,"0");
-return h+":"+m+":"+s;
-
-}
-
-// --- IP del usuario ---
-
-async function obtenerIP(){
-
-try{
-
-const res=await fetch("https://api.ipify.org?format=json");
-const data=await res.json();
-return data.ip;
-
-}catch(e){
-
-return null;
-
-}
-
-}
-
-async function sha256Hex(texto){
-
-const buffer=await crypto.subtle.digest("SHA-256", new TextEncoder().encode(texto));
-return Array.from(new Uint8Array(buffer)).map(b=>b.toString(16).padStart(2,"0")).join("");
-
-}
-
-// La IP nunca se guarda en texto plano: se guarda un hash con sal,
-// tanto en Firebase como dentro del token.
-async function hashIP(ip){
-
-return await sha256Hex("ip:"+ip+":"+SAL_FIRMA);
-
-}
-
-// --- Firma y validez temporal del token de estado ---
-
-async function crearToken(estado){
-
-const payload=JSON.stringify({ ...estado, iat: Date.now() });
-const firma=await sha256Hex(payload+SAL_FIRMA);
-return btoa(unescape(encodeURIComponent(payload)))+"."+firma;
-
-}
-
-async function leerToken(token){
-
-try{
-
-const [payloadB64, firma]=token.split(".");
-const payload=decodeURIComponent(escape(atob(payloadB64)));
-const firmaEsperada=await sha256Hex(payload+SAL_FIRMA);
-
-if(firma!==firmaEsperada){
-return null;
-}
-
-const estado=JSON.parse(payload);
-
-// Los tokens de key ya finalizada (done) no vencen, porque solo muestran
-// una key que ya existe. Los tokens de fase intermedia sí vencen rápido.
-if(!estado.done){
-
-const edad=Date.now()-estado.iat;
-
-if(edad>TOKEN_MAX_EDAD_MS || edad<0){
-return null;
-}
-
-}
-
-// Validación estricta de forma: solo duraciones permitidas
-if(!FASES_POR_HORA[estado.horas]){
-return null;
-}
-
-return estado;
-
-}catch(e){
-
-return null;
-
-}
-
-}
-
-// --- Finalización de la key (ÚNICO punto donde se escribe la key en Firebase) ---
-// La key ahora SOLO guarda su timestamp de expiración, nada más.
-// La existencia de "expira" es lo que indica que la key ya fue finalizada.
-// Nada se guarda en la base de datos durante las fases intermedias: el
-// progreso solo vive dentro del token firmado (con expiración de 20 min).
-async function finalizarKeySiNecesario(key,horas,ipHash){
-
-const expiraSnap=await get(ref(db,"KEYS/"+key+"/expira"));
-
-if(expiraSnap.exists()){
-
-return expiraSnap.val();
-
-}
-
-const expiraTimestamp=Date.now()+(horas*60*60*1000);
-
-await set(ref(db,"KEYS/"+key+"/expira"), expiraTimestamp);
-
-// El bloqueo por IP recién se activa AQUÍ, cuando la key ya está lista.
-// Vive aparte, en IPS/{ipHash}, no dentro de la key.
-await guardarBloqueo(ipHash, expiraTimestamp);
-
-return expiraTimestamp;
-
-}
-
-// --- Bloqueo por IP (cooldown entre keys, solo tras completar una) ---
-
-async function leerBloqueo(ipHash){
-
-const snap=await get(ref(db,"IPS/"+ipHash));
-return snap.exists() ? snap.val() : null;
-
-}
-
-async function guardarBloqueo(ipHash, bloqueadoHasta){
-
-await set(ref(db,"IPS/"+ipHash), { bloqueadoHasta });
-
-}
-
-const botones=document.getElementById("botones");
-const ipInfoDiv=document.getElementById("ipInfo");
-const bloqueadoDiv=document.getElementById("bloqueado");
-const contadorDiv=document.getElementById("contador");
-const faseInfoDiv=document.getElementById("faseInfo");
-const faseProgresoDiv=document.getElementById("faseProgreso");
-const dotsDiv=document.getElementById("dots");
-const btnFase=document.getElementById("btnFase");
-const keyDiv=document.getElementById("key");
-const expiraDiv=document.getElementById("expira");
-const estadoDiv=document.getElementById("estado");
-const volverBtn=document.getElementById("volver");
-const copiarBtn=document.getElementById("copiar");
-
-let estadoActual=null;
-let ipActual=null;
-let ipHashActual=null;
-let intervaloContador=null;
-let procesando=false;
-
-function ocultarTodo(){
-
-botones.style.display="none";
-bloqueadoDiv.style.display="none";
-faseInfoDiv.style.display="none";
-keyDiv.style.display="none";
-expiraDiv.style.display="none";
-volverBtn.style.display="none";
-copiarBtn.style.display="none";
-estadoDiv.innerText="";
-estadoDiv.classList.remove("error");
-
-if(intervaloContador){
-clearInterval(intervaloContador);
-intervaloContador=null;
-}
-
-}
-
-function mostrarError(msg){
-
-ocultarTodo();
-botones.style.display="flex";
-estadoDiv.innerText=msg;
-estadoDiv.classList.add("error");
-
-}
-
-function mostrarBotones(){
-
-ocultarTodo();
-botones.style.display="flex";
-
-}
-
-function mostrarBloqueado(bloqueadoHasta){
-
-ocultarTodo();
-bloqueadoDiv.style.display="block";
-
-function actualizar(){
-
-const restante=bloqueadoHasta-Date.now();
-
-if(restante<=0){
-
-clearInterval(intervaloContador);
-intervaloContador=null;
-mostrarBotones();
-return;
-
-}
-
-contadorDiv.innerText=formatearContador(restante);
-
-}
-
-actualizar();
-intervaloContador=setInterval(actualizar,1000);
-
-}
-
-function pintarDotsFases(faseActual,total){
-
-dotsDiv.innerHTML="";
-for(let i=1;i<=total;i++){
-const d=document.createElement("div");
-d.className="dot"+(i<=faseActual ? " activo" : "");
-dotsDiv.appendChild(d);
-}
-
-}
-
-function mostrarPantallaFase(fase,total){
-
-ocultarTodo();
-faseInfoDiv.style.display="block";
-volverBtn.style.display="inline-block";
-
-faseProgresoDiv.innerText="Fase "+fase+" de "+total;
-pintarDotsFases(fase,total);
-
-btnFase.disabled=false;
-btnFase.innerText="INICIAR FASE "+fase;
-
-}
-
-function mostrarKey(key, expiraTimestamp){
-
-ocultarTodo();
-keyDiv.style.display="block";
-expiraDiv.style.display="block";
-volverBtn.style.display="inline-block";
-copiarBtn.style.display="inline-block";
-
-keyDiv.innerText=key;
-expiraDiv.innerHTML="Expira el:<br><b>"+formatearFecha(expiraTimestamp)+"</b>";
-estadoDiv.innerText="✔ Key lista para usar";
-
-}
-
-async function reiniciar(){
-
-const url=new URL(window.location.href);
-url.search="";
-window.history.replaceState({}, "", url.toString());
-
-estadoActual=null;
-document.querySelectorAll(".botones .btn").forEach(b=>{
-b.disabled=false;
-b.innerHTML="⏱ KEY "+b.dataset.horas+" HORAS";
-});
-keyDiv.innerText="";
-expiraDiv.innerHTML="";
-
-await revisarEstadoInicial();
-
-}
-
-volverBtn.addEventListener("click", reiniciar);
-
-copiarBtn.addEventListener("click", ()=>{
-
-navigator.clipboard.writeText(keyDiv.innerText);
-estadoDiv.innerText="✔ Key copiada al portapapeles";
-
-});
-
-async function acortarConCuty(urlLarga){
-
-const apiUrl="https://cuty.io/api?api="+CUTY_API_KEY+"&url="+encodeURIComponent(urlLarga)+"&format=text";
-const respuesta=await fetch(apiUrl);
-const texto=await respuesta.text();
-return texto.trim();
-
-}
-
-// Construye la cadena de links de cuty.io de atrás hacia adelante para que
-// el usuario pase por RONDAS_POR_FASE anuncios seguidos sin volver a tu página.
-async function construirCadenaCuty(numRondas, urlFinal){
-
-let urlActual=urlFinal;
-
-for(let i=0;i<numRondas;i++){
-urlActual=await acortarConCuty(urlActual);
-}
-
-return urlActual;
-
-}
-
-// No escribe nada en Firebase: el siguiente estado (fase o done) se
-// codifica y firma únicamente en el token de la URL de destino.
-async function irACutyFase(estadoBase, faseSiguiente, total, done){
-
-const nuevoEstado={ ...estadoBase, fase: done ? estadoBase.fase : faseSiguiente, done: !!done };
-
-const token=await crearToken(nuevoEstado);
-const urlDestinoFinal=PAGINA_BASE+"?t="+encodeURIComponent(token);
-
-const primerLink=await construirCadenaCuty(RONDAS_POR_FASE, urlDestinoFinal);
-
-window.location.href=primerLink;
-
-}
-
-document.querySelectorAll(".botones .btn").forEach(btn=>{
-
-btn.addEventListener("click", async ()=>{
-
-if(procesando) return;
-
-if(!ipActual){
-estadoDiv.innerText="✘ No se pudo verificar tu conexión, recarga la página";
-estadoDiv.classList.add("error");
-return;
-}
-
-// Doble chequeo defensivo: revalida el bloqueo justo antes de generar
-const bloqueo=await leerBloqueo(ipHashActual);
-
-if(bloqueo && bloqueo.bloqueadoHasta>Date.now()){
-
-mostrarBloqueado(bloqueo.bloqueadoHasta);
-return;
-
-}
-
-procesando=true;
-
-const horas=parseInt(btn.dataset.horas);
-const total=FASES_POR_HORA[horas];
-
-document.querySelectorAll(".botones .btn").forEach(b=> b.disabled=true );
-btn.innerHTML="<span class='spinner'></span> Preparando...";
-
-const key=generarKey();
-
-try{
-
-// Nada se escribe en Firebase aquí. El estado (key, horas, fase 1,
-// done:false) solo existe en memoria y, al pasar de pantalla, en el
-// token firmado de la URL. La key no "existe" en la base de datos
-// hasta que se completa la última fase.
-estadoActual={ key, horas, ip: ipHashActual, fase:1, done:false };
-
-const url=new URL(window.location.href);
-url.search="";
-const token=await crearToken(estadoActual);
-url.searchParams.set("t", token);
-window.history.replaceState({}, "", url.toString());
-
-mostrarPantallaFase(1,total);
-
-}catch(e){
-
-btn.innerHTML="⏱ KEY "+btn.dataset.horas+" HORAS";
-document.querySelectorAll(".botones .btn").forEach(b=> b.disabled=false );
-estadoDiv.innerText="✘ Error al generar la key";
-estadoDiv.classList.add("error");
-
-}finally{
-
-procesando=false;
-
-}
-
-});
-
-});
-
-btnFase.addEventListener("click", async ()=>{
-
-if(procesando) return;
-
-if(!estadoActual){
-mostrarError("Sesión inválida, genera una key de nuevo.");
-return;
-}
-
-procesando=true;
-
-const total=FASES_POR_HORA[estadoActual.horas];
-const esUltimaFase=estadoActual.fase>=total;
-
-btnFase.disabled=true;
-btnFase.innerHTML="<span class='spinner'></span> Redirigiendo...";
-
-try{
-
-if(esUltimaFase){
-
-await irACutyFase(estadoActual, estadoActual.fase, total, true);
-
-}else{
-
-await irACutyFase(estadoActual, estadoActual.fase+1, total, false);
-
-}
-
-}catch(e){
-
-btnFase.disabled=false;
-btnFase.innerText="INICIAR FASE "+estadoActual.fase;
-estadoDiv.innerText="✘ Error al continuar, inténtalo de nuevo";
-estadoDiv.classList.add("error");
-
-}finally{
-
-procesando=false;
-
-}
-
-});
-
-// Revisa token en la URL (continuación de fases) o, si no hay token,
-// revisa si la IP está bloqueada para decidir qué mostrar.
-async function revisarEstadoInicial(){
-
-const params=new URLSearchParams(window.location.search);
-const token=params.get("t");
-
-if(token){
-
-const estado=await leerToken(token);
-
-if(!estado){
-mostrarError("Enlace inválido, alterado o vencido. Genera una key nuevamente.");
-return;
-}
-
-// El hash de IP dentro del token debe coincidir con el de esta sesión
-if(estado.ip!==ipHashActual){
-mostrarError("Este enlace fue generado desde otra conexión y no es válido aquí.");
-return;
-}
-
-estadoActual=estado;
-const total=FASES_POR_HORA[estado.horas];
-
-if(estado.done){
-
-// Recién aquí, al haber terminado todas las fases, se finaliza la key
-// (se guarda solo su expira) y se activa el bloqueo por IP aparte.
-const expiraTimestamp=await finalizarKeySiNecesario(estado.key, estado.horas, ipHashActual);
-mostrarKey(estado.key, expiraTimestamp);
-
-}else{
-
-mostrarPantallaFase(estado.fase, total);
-
-}
-
-return;
-
-}
-
-// Sin token: revisamos si la IP tiene un bloqueo activo (solo existe
-// si ya completaste una key alguna vez).
-const bloqueo=await leerBloqueo(ipHashActual);
-
-if(bloqueo && bloqueo.bloqueadoHasta>Date.now()){
-
-mostrarBloqueado(bloqueo.bloqueadoHasta);
-
-}else{
-
-mostrarBotones();
-
-}
-
-}
-
-window.addEventListener("DOMContentLoaded", async ()=>{
-
-ipActual=await obtenerIP();
-
-if(!ipActual){
-
-ipInfoDiv.innerText="⚠ No se pudo verificar tu IP";
-mostrarError("No se pudo verificar tu conexión. Recarga la página e inténtalo de nuevo.");
-return;
-
-}
-
-ipHashActual=await hashIP(ipActual);
-ipInfoDiv.innerText="Conexión verificada";
-
-await revisarEstadoInicial();
-
-});
-
+<script>
+  // ⚠️ Reemplazá con la config real de tu proyecto Firebase
+  const firebaseConfig = {
+    apiKey: "TU_API_KEY",
+    databaseURL: "https://TU_PROYECTO.firebaseio.com",
+    projectId: "TU_PROYECTO"
+  };
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.database();
+
+  const DURACION_HORAS = 24;
+  const COOLDOWN_HORAS = 24;
+  const REFERRER_VALIDO = "blacklink.site";
+
+  function generarKey() {
+    const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+    let random = "";
+    for (let i = 0; i < 8; i++) random += chars.charAt(Math.floor(Math.random() * chars.length));
+    return "FREE-" + random;
+  }
+
+  async function obtenerIP() {
+    const res = await fetch("https://api.ipify.org?format=json");
+    const data = await res.json();
+    return data.ip.replace(/\./g, "_");
+  }
+
+  async function iniciar() {
+    const status = document.getElementById("status");
+    const sub = document.getElementById("subText");
+    const loader = document.getElementById("loader");
+    const backBtn = document.getElementById("backBtn");
+
+    // 1. Verificar que venga de BlackLink
+    if (!document.referrer.includes(REFERRER_VALIDO)) {
+      loader.style.display = "none";
+      sub.textContent = "Acceso no válido.";
+      status.textContent = "Tenés que completar el acortador primero.";
+      backBtn.style.display = "block";
+      return;
+    }
+
+    try {
+      const ip = await obtenerIP();
+      const cooldownRef = db.ref("COOLDOWNS/" + ip);
+      const snap = await cooldownRef.once("value");
+      const ahora = Date.now();
+
+      if (snap.exists()) {
+        const ultima = snap.val().timestamp;
+        const restante = (ultima + COOLDOWN_HORAS * 3600 * 1000) - ahora;
+        if (restante > 0) {
+          loader.style.display = "none";
+          const horas = Math.ceil(restante / 3600000);
+          sub.textContent = "Ya generaste una key.";
+          status.textContent = `Volvé a intentar en ~${horas}h.`;
+          backBtn.style.display = "block";
+          return;
+        }
+      }
+
+      let key, existe = true;
+      while (existe) {
+        key = generarKey();
+        const check = await db.ref("KEYS/" + key).once("value");
+        existe = check.exists();
+      }
+
+      const expira = ahora + DURACION_HORAS * 3600 * 1000;
+      await db.ref("KEYS/" + key).set({ expira: expira });
+      await cooldownRef.set({ timestamp: ahora });
+
+      loader.style.display = "none";
+      sub.textContent = "¡Key generada con éxito!";
+      const box = document.getElementById("keyBox");
+      box.textContent = key;
+      box.style.display = "block";
+      document.getElementById("copyBtn").style.display = "block";
+      status.textContent = `Válida por ${DURACION_HORAS} horas.`;
+
+    } catch (err) {
+      loader.style.display = "none";
+      status.textContent = "Error al generar la key. Intentá de nuevo.";
+      backBtn.style.display = "block";
+      console.error(err);
+    }
+  }
+
+  function copiarKey() {
+    const key = document.getElementById("keyBox").textContent;
+    navigator.clipboard.writeText(key);
+    document.getElementById("status").textContent = "¡Copiada!";
+  }
+
+  iniciar();
 </script>
 
 </body>
