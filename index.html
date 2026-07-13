@@ -143,7 +143,8 @@
 
     <div id="keyBox" class="key-box"></div>
     <button id="copyBtn" style="display:none;" onclick="copiarKey()">Copiar key</button>
-    <a id="goShortenerBtn" class="btn2" style="display:none;" href="https://blacklink.site/l.php?u=u94d980f76e">⚡ Generar Key de 8h</a>
+    <a id="goShortenerBtn8" class="btn2" style="display:none;" href="https://blacklink.site/l.php?u=u94d980f76e" onclick="marcarPendiente('8')">⚡ Generar Key de 8h</a>
+    <a id="goShortenerBtn12" class="btn2" style="display:none;" href="https://blacklink.site/l.php?u=u95608603eb" onclick="marcarPendiente('12')">⚡ Generar Key de 12h</a>
     <a id="backBtn" class="btn2" style="display:none;" href="https://darkmatter-oficial.github.io/DarkMatter-Shop/">Volver</a>
 
     <div id="status" class="status"></div>
@@ -162,11 +163,69 @@
   // Configurá las Firebase Security Rules (por ejemplo, exigiendo autenticación
   // de Firebase Auth o validando la forma de los datos) desde la consola de
   // Firebase para cerrar ese hueco.
+  //
+  // ===================== NOTA SOBRE LA LÓGICA DE 2 ACORTADORES =====================
+  // blacklink.site es un único dominio, así que document.referrer va a decir
+  // "blacklink.site" sin importar cuál de los 2 links (8h o 12h) haya
+  // completado la persona. Para saber CUÁL de los dos completó, este archivo
+  // guarda en localStorage, justo antes de mandar a la persona al acortador,
+  // qué tipo de key pidió ("8" o "12") junto con la hora en que lo pidió
+  // (marcarPendiente). Al volver a la página, si el referrer es blacklink.site
+  // Y existe ese "pendiente" y todavía no venció su ventana de validez
+  // (PENDING_VALIDEZ_MS), recién ahí se genera la key de ESE tipo. Si no hay
+  // pendiente válido (por ejemplo la persona entró directo, o su pendiente ya
+  // expiró), NO se genera ninguna key y NO se le dice "ya tenés una key": se
+  // le muestran de nuevo los 2 botones para que elija. Esto evita el bug de
+  // caer en la pantalla de "ya tenés una key" sin haber completado nada: esa
+  // pantalla SOLO aparece si existe un cooldown real y vigente guardado en
+  // Firebase (o sea, una key que YA fue generada con éxito antes), nunca por
+  // el solo hecho de volver desde blacklink.site.
+  //
+  // Mientras haya una key activa (de 8h o de 12h) para tu IP, no se puede
+  // generar la otra: el cooldown en Firebase guarda cuántas horas dura esa
+  // key concreta (cooldown.horas) y hasta que no se cumplan esas horas no se
+  // muestran de nuevo los botones de generar.
   const DB_URL = "https://darkmatter-68e65-default-rtdb.firebaseio.com";
 
-  const DURACION_HORAS = 8;
-  const COOLDOWN_HORAS = 8;
   const REFERRER_VALIDO = "blacklink.site";
+
+  const TIPOS_KEY = {
+    "8":  { horas: 8,  link: "https://blacklink.site/l.php?u=u94d980f76e", boton: "goShortenerBtn8" },
+    "12": { horas: 12, link: "https://blacklink.site/l.php?u=u95608603eb", boton: "goShortenerBtn12" }
+  };
+
+  const PENDING_KEY = "dm_pending_tipo";
+  const PENDING_VALIDEZ_MS = 30 * 60 * 1000; // 30 minutos para completar el acortador después de tocar el botón
+
+  function marcarPendiente(tipo) {
+    try {
+      localStorage.setItem(PENDING_KEY, JSON.stringify({ tipo: tipo, ts: Date.now() }));
+    } catch (err) {
+      console.error(err);
+    }
+  }
+
+  function leerPendiente() {
+    try {
+      const raw = localStorage.getItem(PENDING_KEY);
+      if (!raw) return null;
+      const data = JSON.parse(raw);
+      if (!data || !data.tipo || !data.ts) return null;
+      if (!TIPOS_KEY[data.tipo]) return null;
+      if (Date.now() - data.ts > PENDING_VALIDEZ_MS) return null;
+      return data;
+    } catch (err) {
+      return null;
+    }
+  }
+
+  function limpiarPendiente() {
+    try {
+      localStorage.removeItem(PENDING_KEY);
+    } catch (err) {
+      console.error(err);
+    }
+  }
 
   function generarKey() {
     const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
@@ -232,18 +291,37 @@
     tick();
   }
 
+  function ocultarBotonesAcortador() {
+    document.getElementById("goShortenerBtn8").style.display = "none";
+    document.getElementById("goShortenerBtn12").style.display = "none";
+  }
+
+  function mostrarBotonesAcortador() {
+    document.getElementById("goShortenerBtn8").style.display = "block";
+    document.getElementById("goShortenerBtn12").style.display = "block";
+  }
+
+  function mostrarKeyGenerada(key, horas) {
+    const box = document.getElementById("keyBox");
+    box.textContent = key;
+    box.style.display = "block";
+    document.getElementById("copyBtn").style.display = "block";
+    document.getElementById("status").textContent = `Válida por ${horas} horas.`;
+  }
+
   async function iniciar() {
     const status = document.getElementById("status");
     const sub = document.getElementById("subText");
     const loader = document.getElementById("loader");
     const backBtn = document.getElementById("backBtn");
-    const goShortenerBtn = document.getElementById("goShortenerBtn");
     const debug = document.getElementById("debug");
 
     let ip, ahora, cooldown;
 
-    // Primero se revisa si ya existe una key gratis activa para esta IP,
-    // sin importar si se entró directo o a través del acortador.
+    // Primero se revisa si ya existe una key activa (de 8h o de 12h) para
+    // esta IP. Esto es lo único que puede mostrar la pantalla de "ya tenés
+    // una key": nunca se muestra ese mensaje solo por volver desde
+    // blacklink.site sin haber generado una key antes.
     try {
       ip = await obtenerIP();
       ahora = Date.now();
@@ -258,59 +336,71 @@
       return;
     }
 
-    if (cooldown && cooldown.timestamp && cooldown.key) {
-      const restante = (cooldown.timestamp + COOLDOWN_HORAS * 3600 * 1000) - ahora;
+    if (cooldown && cooldown.timestamp && cooldown.key && cooldown.horas) {
+      const restante = (cooldown.timestamp + cooldown.horas * 3600 * 1000) - ahora;
       if (restante > 0) {
         loader.style.display = "none";
-        sub.textContent = "Ya tenés una key activa.";
-        const box = document.getElementById("keyBox");
-        box.textContent = cooldown.key;
-        box.style.display = "block";
-        document.getElementById("copyBtn").style.display = "block";
-        status.textContent = `Válida por ${DURACION_HORAS} horas.`;
-        iniciarContador(restante, "Tu key es válida por:");
+        sub.textContent = `Ya tenés una key de ${cooldown.horas}h activa.`;
+        ocultarBotonesAcortador();
+        mostrarKeyGenerada(cooldown.key, cooldown.horas);
+        iniciarContador(restante, `Tu key de ${cooldown.horas}h es válida por:`);
         return;
       }
     }
 
-    if (!document.referrer.includes(REFERRER_VALIDO)) {
-      loader.style.display = "none";
-      sub.textContent = "Para generar tu key de 8 horas, primero debes completar el acortador.";
-      status.textContent = "";
-      goShortenerBtn.style.display = "block";
-      return;
-    }
+    // No hay ninguna key activa todavía. Ahora, y solo ahora, se revisa si
+    // la persona viene de blacklink.site Y tiene un pendiente válido (o sea,
+    // tocó alguno de los 2 botones hace menos de 30 minutos). Si no se
+    // cumplen las dos condiciones, jamás se genera una key sola porque el
+    // referrer diga blacklink.site: se le vuelven a mostrar los 2 botones.
+    const pendiente = leerPendiente();
+    const vieneDeAcortador = document.referrer.includes(REFERRER_VALIDO);
 
-    try {
-      let key, existe = true, intentos = 0;
-      while (existe) {
-        intentos++;
-        if (intentos > 15) throw new Error("No se pudo generar una key única, intentá de nuevo");
-        key = generarKey();
-        const check = await dbGet(`KEYS/${key}`);
-        existe = check !== null;
+    if (vieneDeAcortador && pendiente) {
+      const tipo = TIPOS_KEY[pendiente.tipo];
+      try {
+        let key, existe = true, intentos = 0;
+        while (existe) {
+          intentos++;
+          if (intentos > 15) throw new Error("No se pudo generar una key única, intentá de nuevo");
+          key = generarKey();
+          const check = await dbGet(`KEYS/${key}`);
+          existe = check !== null;
+        }
+
+        const expira = ahora + tipo.horas * 3600 * 1000;
+        await dbSet(`KEYS/${key}`, { expira: expira });
+        await dbSet(`COOLDOWNS/${ip}`, { timestamp: ahora, key: key, horas: tipo.horas });
+
+        limpiarPendiente();
+
+        loader.style.display = "none";
+        sub.textContent = "¡Key generada con éxito!";
+        ocultarBotonesAcortador();
+        mostrarKeyGenerada(key, tipo.horas);
+        return;
+      } catch (err) {
+        loader.style.display = "none";
+        sub.textContent = "Ocurrió un error.";
+        status.textContent = "Tocá para reintentar.";
+        debug.textContent = err.message;
+        backBtn.style.display = "block";
+        console.error(err);
+        return;
       }
-
-      const expira = ahora + DURACION_HORAS * 3600 * 1000;
-      await dbSet(`KEYS/${key}`, { expira: expira });
-      await dbSet(`COOLDOWNS/${ip}`, { timestamp: ahora, key: key });
-
-      loader.style.display = "none";
-      sub.textContent = "¡Key generada con éxito!";
-      const box = document.getElementById("keyBox");
-      box.textContent = key;
-      box.style.display = "block";
-      document.getElementById("copyBtn").style.display = "block";
-      status.textContent = `Válida por ${DURACION_HORAS} horas.`;
-
-    } catch (err) {
-      loader.style.display = "none";
-      sub.textContent = "Ocurrió un error.";
-      status.textContent = "Tocá para reintentar.";
-      debug.textContent = err.message;
-      backBtn.style.display = "block";
-      console.error(err);
     }
+
+    // Si llegamos acá: no hay key activa, y (no viene del acortador) o (no
+    // tiene un pendiente válido). Se limpia cualquier pendiente vencido y se
+    // muestran los 2 botones para que elija cuál acortador completar.
+    if (pendiente === null) {
+      limpiarPendiente();
+    }
+
+    loader.style.display = "none";
+    sub.textContent = "Elegí qué key querés generar y completá el acortador correspondiente.";
+    status.textContent = "";
+    mostrarBotonesAcortador();
   }
 
   function copiarKey() {
