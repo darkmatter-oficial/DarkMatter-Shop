@@ -244,6 +244,7 @@
     <input type="email" id="registerEmailInput" class="auth-input" placeholder="tucorreo@ejemplo.com">
     <button id="enviarCodigoRegistroBtn" onclick="enviarCodigoRegistro()">Enviar código</button>
     <div id="registerEmailStatus" class="status"></div>
+    <div id="registerEmailDebug" class="debug"></div>
     <button class="btn-outline" onclick="mostrarPantalla('authChoice')">Volver</button>
   </div>
 
@@ -260,7 +261,7 @@
   <!-- ===================== REGISTRO: CONTRASEÑA ===================== -->
   <div id="registerPassword" class="buy-section">
     <h2>🔑 Creá tu contraseña</h2>
-    <input type="password" id="registerPasswordInput" class="auth-input" placeholder="Contraseña">
+    <input type="password" id="registerPasswordInput" class="auth-input" placeholder="Contraseña (mín. 8 caracteres, con letras y números)">
     <input type="password" id="registerPasswordConfirmInput" class="auth-input" placeholder="Repetí la contraseña">
     <button id="crearCuentaBtn" onclick="crearCuenta()">Crear cuenta</button>
     <div id="registerPasswordStatus" class="status"></div>
@@ -274,6 +275,7 @@
     <input type="password" id="loginPasswordInput" class="auth-input" placeholder="Contraseña">
     <button id="enviarLoginBtn" onclick="enviarLogin()">Iniciar sesión</button>
     <div id="loginFormStatus" class="status"></div>
+    <div id="loginFormDebug" class="debug"></div>
     <button class="btn-outline" onclick="mostrarPantalla('authChoice')">Volver</button>
   </div>
 
@@ -387,6 +389,38 @@
 </div>
 
 <script>
+  // ===================== NOTA DE SEGURIDAD IMPORTANTE =====================
+  // Este sistema es 100% cliente (HTML/JS) y llama directamente a la REST API
+  // de Firebase. Las mejoras de este archivo (salt en contraseñas, expiración
+  // de códigos, límite de intentos, expiración de sesión) reducen riesgos del
+  // lado del cliente, pero NO reemplazan las Reglas de Seguridad de Firebase.
+  // Si el nodo /USERS, /KEYS o /COOLDOWNS de tu Realtime Database permite
+  // lectura/escritura pública sin reglas, cualquier persona puede leer los
+  // hashes de contraseñas o crear/borrar keys directamente contra la API de
+  // Firebase, sin pasar por esta página. Configurá las Firebase Security
+  // Rules (por ejemplo, exigiendo autenticación de Firebase Auth o validando
+  // la forma de los datos) desde la consola de Firebase para cerrar ese hueco.
+  //
+  // NOTA SOBRE CÓDIGOS QUE NO LLEGAN AL CORREO: si el envío con EmailJS no
+  // marca error pero el código nunca llega, revisá en el dashboard de
+  // EmailJS (Email Templates > template_mbwtpph) que el campo "To Email"
+  // esté configurado con la variable correcta (por ejemplo {{para}} o
+  // {{to_email}}, según cuál uses ahí). Este archivo ahora manda varios
+  // alias (para, to_email, email, reply_to) para cubrir esa configuración,
+  // y muestra el error real de EmailJS en pantalla si el envío falla.
+  //
+  // NOTA SOBRE EL COMPROBANTE QUE NO SE ENVÍA (LÍMITE DE 50KB DE EMAILJS):
+  // EmailJS limita el tamaño del payload que recibe (variables del template)
+  // a 50KB en total. El bug original calculaba el tamaño objetivo de la
+  // compresión sobre el archivo YA DECODIFICADO (resultado.length * 0.75),
+  // pero lo que en realidad se envía a EmailJS es el string en BASE64, que
+  // pesa un 33% más que el binario decodificado. Con el límite viejo de
+  // 38KB "decodificados", el base64 real transmitido rondaba los 50.6KB,
+  // superando el límite de EmailJS apenas sumás los demás campos del
+  // template (fecha, horas, precio, comprador, etc.), por eso el envío
+  // fallaba. Ahora comprimirImagen() mide y limita directamente el tamaño
+  // del string base64 transmitido, y se bajó el objetivo a 40KB para dejar
+  // margen de sobra bajo el límite de 50KB de EmailJS.
   const DB_URL = "https://darkmatter-68e65-default-rtdb.firebaseio.com";
 
   const DURACION_HORAS = 8;
@@ -625,9 +659,13 @@
 
   const SESSION_KEY = "dm_session";
   const EMAILJS_TEMPLATE_ID_CODE = "template_mbwtpph";
+  const CODIGO_VALIDEZ_MS = 10 * 60 * 1000; // los códigos de verificación expiran a los 10 minutos
+  const CODIGO_MAX_INTENTOS = 5; // máximo de intentos fallidos antes de exigir un código nuevo
+  const SESSION_DURACION_MS = 30 * 24 * 3600 * 1000; // la sesión guardada expira a los 30 días
+  const PASSWORD_MIN_LARGO = 8;
 
-  let regState = { email: "", code: "" };
-  let loginState = { email: "", code: "" };
+  let regState = { email: "", code: "", expira: 0, intentos: 0 };
+  let loginState = { email: "", code: "", expira: 0, intentos: 0 };
 
   function emailKeyFromEmail(email) {
     return email.toLowerCase().trim().replace(/[.#$\[\]]/g, "_");
@@ -637,12 +675,27 @@
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
   }
 
+  function validarPassword(password) {
+    if (password.length < PASSWORD_MIN_LARGO) return false;
+    if (!/[a-zA-Z]/.test(password)) return false;
+    if (!/[0-9]/.test(password)) return false;
+    return true;
+  }
+
   function generarCodigo() {
     return String(Math.floor(100000 + Math.random() * 900000));
   }
 
-  async function hashPassword(password) {
-    const enc = new TextEncoder().encode(password);
+  // Genera un salt aleatorio distinto para cada usuario, evitando que dos
+  // contraseñas iguales produzcan el mismo hash y dificultando ataques con
+  // tablas precalculadas (rainbow tables).
+  function generarSalt() {
+    const bytes = crypto.getRandomValues(new Uint8Array(16));
+    return Array.from(bytes).map(b => b.toString(16).padStart(2, "0")).join("");
+  }
+
+  async function hashPassword(password, salt) {
+    const enc = new TextEncoder().encode(salt + ":" + password);
     const hashBuffer = await crypto.subtle.digest("SHA-256", enc);
     const hashArray = Array.from(new Uint8Array(hashBuffer));
     return hashArray.map(b => b.toString(16).padStart(2, "0")).join("");
@@ -653,7 +706,8 @@
       const raw = localStorage.getItem(SESSION_KEY);
       if (!raw) return null;
       const data = JSON.parse(raw);
-      if (data && data.email) return data;
+      if (data && data.email && data.expira && data.expira > Date.now()) return data;
+      if (data) localStorage.removeItem(SESSION_KEY);
       return null;
     } catch (err) {
       return null;
@@ -661,7 +715,7 @@
   }
 
   function guardarSesion(email) {
-    localStorage.setItem(SESSION_KEY, JSON.stringify({ email: email }));
+    localStorage.setItem(SESSION_KEY, JSON.stringify({ email: email, expira: Date.now() + SESSION_DURACION_MS }));
   }
 
   function iniciarCompra() {
@@ -673,10 +727,20 @@
     }
   }
 
+  // Se envían varios alias del correo destino (para, to_email, email, reply_to)
+  // porque el campo "To Email" de la plantilla en EmailJS puede estar
+  // configurado con cualquiera de esos nombres de variable. Si la plantilla
+  // solo reconoce uno de ellos, el código no llega aunque el envío no marque
+  // error, así que cubrimos las convenciones más comunes de EmailJS.
   async function enviarCodigoPorCorreo(email, codigo) {
     return emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID_CODE, {
       codigo: codigo,
+      code: codigo,
       para: email,
+      to_email: email,
+      to_name: email,
+      email: email,
+      reply_to: email,
       fecha: new Date().toLocaleString("es-CO")
     }, { publicKey: EMAILJS_PUBLIC_KEY });
   }
@@ -684,14 +748,18 @@
   function prepararRegistro() {
     document.getElementById("registerEmailInput").value = "";
     document.getElementById("registerEmailStatus").textContent = "";
-    regState = { email: "", code: "" };
+    document.getElementById("registerEmailDebug").textContent = "";
+    regState = { email: "", code: "", expira: 0, intentos: 0 };
     mostrarPantalla('registerEmail');
   }
 
   async function enviarCodigoRegistro() {
     const status = document.getElementById("registerEmailStatus");
+    const debug = document.getElementById("registerEmailDebug");
     const btn = document.getElementById("enviarCodigoRegistroBtn");
     const email = document.getElementById("registerEmailInput").value.trim();
+
+    debug.textContent = "";
 
     if (!validarEmail(email)) {
       status.textContent = "Ingresá un correo válido.";
@@ -713,6 +781,8 @@
       const codigo = generarCodigo();
       regState.email = email;
       regState.code = codigo;
+      regState.expira = Date.now() + CODIGO_VALIDEZ_MS;
+      regState.intentos = 0;
 
       status.textContent = "Enviando código...";
       await enviarCodigoPorCorreo(email, codigo);
@@ -723,7 +793,8 @@
       btn.disabled = false;
       mostrarPantalla('registerVerify');
     } catch (err) {
-      status.textContent = "Ocurrió un error, intentá de nuevo.";
+      status.textContent = "❌ No se pudo enviar el código. Revisá el detalle abajo.";
+      debug.textContent = (err && (err.text || err.message)) ? (err.text || err.message) : JSON.stringify(err);
       btn.disabled = false;
       console.error(err);
     }
@@ -738,7 +809,18 @@
       return;
     }
 
+    if (Date.now() > regState.expira) {
+      status.textContent = "El código expiró. Volvé atrás y solicitá uno nuevo.";
+      return;
+    }
+
+    if (regState.intentos >= CODIGO_MAX_INTENTOS) {
+      status.textContent = "Demasiados intentos fallidos. Volvé atrás y solicitá un código nuevo.";
+      return;
+    }
+
     if (codigo !== regState.code) {
+      regState.intentos++;
       status.textContent = "Código incorrecto.";
       return;
     }
@@ -756,8 +838,8 @@
     const password = document.getElementById("registerPasswordInput").value;
     const passwordConfirm = document.getElementById("registerPasswordConfirmInput").value;
 
-    if (password.length < 6) {
-      status.textContent = "La contraseña debe tener al menos 6 caracteres.";
+    if (!validarPassword(password)) {
+      status.textContent = `La contraseña debe tener al menos ${PASSWORD_MIN_LARGO} caracteres, con letras y números.`;
       return;
     }
 
@@ -770,9 +852,10 @@
     status.textContent = "Creando cuenta...";
 
     try {
-      const passwordHash = await hashPassword(password);
+      const salt = generarSalt();
+      const passwordHash = await hashPassword(password, salt);
       const emailKey = emailKeyFromEmail(regState.email);
-      await dbSet(`USERS/${emailKey}`, { email: regState.email, passwordHash: passwordHash });
+      await dbSet(`USERS/${emailKey}`, { email: regState.email, passwordHash: passwordHash, passwordSalt: salt });
       guardarSesion(regState.email);
       btn.disabled = false;
       status.textContent = "";
@@ -786,9 +869,12 @@
 
   async function enviarLogin() {
     const status = document.getElementById("loginFormStatus");
+    const debug = document.getElementById("loginFormDebug");
     const btn = document.getElementById("enviarLoginBtn");
     const email = document.getElementById("loginEmailInput").value.trim();
     const password = document.getElementById("loginPasswordInput").value;
+
+    debug.textContent = "";
 
     if (!validarEmail(email)) {
       status.textContent = "Ingresá un correo válido.";
@@ -812,7 +898,7 @@
         return;
       }
 
-      const passwordHash = await hashPassword(password);
+      const passwordHash = await hashPassword(password, usuario.passwordSalt);
       if (passwordHash !== usuario.passwordHash) {
         status.textContent = "Contraseña incorrecta.";
         btn.disabled = false;
@@ -822,6 +908,8 @@
       const codigo = generarCodigo();
       loginState.email = email;
       loginState.code = codigo;
+      loginState.expira = Date.now() + CODIGO_VALIDEZ_MS;
+      loginState.intentos = 0;
 
       status.textContent = "Enviando código...";
       await enviarCodigoPorCorreo(email, codigo);
@@ -832,7 +920,8 @@
       btn.disabled = false;
       mostrarPantalla('loginVerify');
     } catch (err) {
-      status.textContent = "Ocurrió un error, intentá de nuevo.";
+      status.textContent = "❌ No se pudo enviar el código. Revisá el detalle abajo.";
+      debug.textContent = (err && (err.text || err.message)) ? (err.text || err.message) : JSON.stringify(err);
       btn.disabled = false;
       console.error(err);
     }
@@ -847,7 +936,18 @@
       return;
     }
 
+    if (Date.now() > loginState.expira) {
+      status.textContent = "El código expiró. Volvé atrás e iniciá sesión de nuevo.";
+      return;
+    }
+
+    if (loginState.intentos >= CODIGO_MAX_INTENTOS) {
+      status.textContent = "Demasiados intentos fallidos. Volvé atrás e iniciá sesión de nuevo.";
+      return;
+    }
+
     if (codigo !== loginState.code) {
+      loginState.intentos++;
       status.textContent = "Código incorrecto.";
       return;
     }
@@ -1048,6 +1148,12 @@
     ctx.putImageData(imageData, 0, 0);
   }
 
+  // maxKB ahora representa el tamaño MÁXIMO del string en BASE64 (lo que
+  // realmente viaja en el payload hacia EmailJS), no el tamaño del binario
+  // decodificado. Antes se medía "resultado.length * 0.75" (equivalente al
+  // tamaño decodificado), lo que dejaba pasar imágenes cuyo base64 real
+  // pesaba ~33% más que el límite fijado, superando el tope de 50KB que
+  // EmailJS acepta por request y haciendo fallar el envío del comprobante.
   function comprimirImagen(archivo, maxKB) {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
@@ -1076,7 +1182,7 @@
           let resultado = canvas.toDataURL("image/jpeg", calidad);
 
           let intentos = 0;
-          while (resultado.length * 0.75 > maxKB * 1024 && intentos < 20) {
+          while (resultado.length > maxKB * 1024 && intentos < 20) {
             if (calidad > 0.4) {
               calidad -= 0.05;
             } else {
@@ -1093,7 +1199,7 @@
             intentos++;
           }
 
-          if (resultado.length * 0.75 > maxKB * 1024) {
+          if (resultado.length > maxKB * 1024) {
             reject(new Error("No se pudo comprimir la imagen lo suficiente. Probá con otra más liviana."));
             return;
           }
@@ -1129,7 +1235,7 @@
     buyDebug.textContent = "";
 
     try {
-      const imagenBase64 = await comprimirImagen(fileInput.files[0], 38);
+      const imagenBase64 = await comprimirImagen(fileInput.files[0], 40);
 
       buyStatus.textContent = "Enviando comprobante...";
 
@@ -1179,7 +1285,7 @@
     buyDebug.textContent = "";
 
     try {
-      const imagenBase64 = await comprimirImagen(fileInput.files[0], 38);
+      const imagenBase64 = await comprimirImagen(fileInput.files[0], 40);
 
       buyStatus.textContent = "Enviando comprobante...";
 
