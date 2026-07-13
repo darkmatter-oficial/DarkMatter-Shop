@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>DM Key Sistem</title>
+<script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   html, body {
@@ -43,6 +44,8 @@
     padding: 32px 28px;
     max-width: 400px;
     width: 100%;
+    max-height: 92dvh;
+    overflow-y: auto;
     text-align: center;
     backdrop-filter: blur(14px);
     box-shadow: 0 0 60px rgba(183, 33, 255, 0.25);
@@ -54,6 +57,11 @@
     background-clip: text;
     color: transparent;
     margin-bottom: 6px;
+  }
+  h2 {
+    font-size: 16px;
+    color: #fff;
+    margin-bottom: 14px;
   }
   p.sub { color: #c8b8e0; font-size: 14px; margin-bottom: 20px; }
   .key-box {
@@ -103,6 +111,11 @@
     margin-top: 8px;
   }
   button:disabled { background: #3a2d4a; box-shadow: none; cursor: not-allowed; }
+  .btn-outline {
+    background: transparent;
+    border: 1px solid rgba(183, 33, 255, 0.5);
+    box-shadow: none;
+  }
   .status { font-size: 13px; color: #c8b8e0; margin-top: 12px; min-height: 18px; }
   .debug { font-size: 10px; color: #6a5a85; margin-top: 8px; word-break: break-all; }
   .loader {
@@ -116,29 +129,261 @@
   }
   @keyframes spin { to { transform: rotate(360deg); } }
   .footer { margin-top: 16px; font-size: 11px; color: #6a5a85; }
+
+  .hours-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 6px;
+  }
+  .hours-grid button { margin-top: 0; font-size: 13px; padding: 12px 6px; }
+  .hours-grid button.selected {
+    background: rgba(0,0,0,0.4);
+    border: 2px solid #b721ff;
+    box-shadow: 0 0 15px rgba(183,33,255,0.5) inset;
+  }
+  .hours-grid button .precio-mini {
+    display: block;
+    font-size: 10px;
+    font-weight: normal;
+    color: #c8b8e0;
+    margin-top: 2px;
+  }
+
+  .nequi-box {
+    background: rgba(0,0,0,0.35);
+    border: 1px dashed #b721ff;
+    border-radius: 12px;
+    padding: 14px;
+    margin-bottom: 6px;
+  }
+  .nequi-box .label { font-size: 11px; color: #a894c4; margin-bottom: 4px; }
+  .nequi-box .numero { font-size: 17px; font-weight: bold; letter-spacing: 1px; }
+
+  .precio-box {
+    background: rgba(0,0,0,0.3);
+    border: 1px solid rgba(183, 33, 255, 0.3);
+    border-radius: 12px;
+    padding: 12px;
+    margin-bottom: 14px;
+  }
+  .precio-box .label { font-size: 11px; color: #a894c4; margin-bottom: 4px; }
+  .precio-box .monto-usd {
+    font-size: 20px;
+    font-weight: bold;
+    background: linear-gradient(90deg, #b721ff, #7b2ff7);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .precio-box .monto-cop { font-size: 13px; color: #c8b8e0; margin-top: 2px; }
+
+  .file-name {
+    font-size: 12px;
+    color: #c8b8e0;
+    margin-top: 8px;
+    word-break: break-all;
+  }
+
+  .buy-section { display: none; }
+
+  .auth-input {
+    width: 100%;
+    padding: 12px;
+    border-radius: 12px;
+    border: 1px solid rgba(183, 33, 255, 0.4);
+    background: rgba(0,0,0,0.35);
+    color: #fff;
+    font-size: 14px;
+    margin-bottom: 10px;
+    outline: none;
+  }
+  .auth-input::placeholder { color: #8a7aa0; }
 </style>
 </head>
 <body>
 
 <div class="card">
-  <h1>🔮 DM Key Sistem</h1>
-  <p class="sub" id="subText">Verificando acceso...</p>
 
-  <div id="loader" class="loader"></div>
+  <!-- ===================== PANTALLA PRINCIPAL ===================== -->
+  <div id="mainScreen">
+    <h1>🔮 DM Key Sistem</h1>
+    <p class="sub" id="subText">Verificando acceso...</p>
 
-  <div id="timerBox" class="timer-box">
-    <div class="label">Podrás generar otra key en:</div>
-    <div id="clock" class="clock">00:00:00</div>
+    <div id="loader" class="loader"></div>
+
+    <div id="timerBox" class="timer-box">
+      <div class="label" id="timerLabel">Tu key es válida por:</div>
+      <div id="clock" class="clock">00:00:00</div>
+    </div>
+
+    <div id="keyBox" class="key-box"></div>
+    <button id="copyBtn" style="display:none;" onclick="copiarKey()">Copiar key</button>
+    <a id="goShortenerBtn" class="btn2" style="display:none;" href="https://blacklink.site/l.php?u=u94d980f76e">⚡ Generar Key de 8h</a>
+    <button id="buyKeyBtn" style="display:none;" onclick="iniciarCompra()">🛒 Comprar Key</button>
+    <a id="backBtn" class="btn2" style="display:none;" href="https://darkmatter-oficial.github.io/DarkMatter-Shop/">Volver</a>
+
+    <div id="status" class="status"></div>
+    <div id="debug" class="debug"></div>
+    <div class="footer">DarkMatter © 2026</div>
   </div>
 
-  <div id="keyBox" class="key-box"></div>
-  <button id="copyBtn" style="display:none;" onclick="copiarKey()">Copiar key</button>
-  <a id="goShortenerBtn" class="btn2" style="display:none;" href="https://blacklink.site/l.php?u=u94d980f76e">⚡ Generar Key de 8h</a>
-  <a id="backBtn" class="btn2" style="display:none;" href="https://darkmatter-oficial.github.io/DarkMatter-Shop/">Volver</a>
+  <!-- ===================== AUTENTICACIÓN: ELEGIR OPCIÓN ===================== -->
+  <div id="authChoice" class="buy-section">
+    <h2>🔐 Necesitás una cuenta</h2>
+    <p class="sub">Para comprar una key primero iniciá sesión o registrate.</p>
+    <button onclick="mostrarPantalla('loginForm')">Iniciar sesión</button>
+    <button onclick="prepararRegistro()">Registrarme</button>
+    <button class="btn-outline" onclick="mostrarPantalla('mainScreen')">Volver</button>
+  </div>
 
-  <div id="status" class="status"></div>
-  <div id="debug" class="debug"></div>
-  <div class="footer">DarkMatter © 2026</div>
+  <!-- ===================== REGISTRO: CORREO ===================== -->
+  <div id="registerEmail" class="buy-section">
+    <h2>📧 Registrate</h2>
+    <p class="sub">Ingresá tu correo electrónico para recibir un código de verificación.</p>
+    <input type="email" id="registerEmailInput" class="auth-input" placeholder="tucorreo@ejemplo.com">
+    <button id="enviarCodigoRegistroBtn" onclick="enviarCodigoRegistro()">Enviar código</button>
+    <div id="registerEmailStatus" class="status"></div>
+    <button class="btn-outline" onclick="mostrarPantalla('authChoice')">Volver</button>
+  </div>
+
+  <!-- ===================== REGISTRO: VERIFICAR CÓDIGO ===================== -->
+  <div id="registerVerify" class="buy-section">
+    <h2>✅ Verificá tu correo</h2>
+    <p class="sub" id="registerVerifySub">Ingresá el código que enviamos a tu correo.</p>
+    <input type="text" id="registerCodeInput" class="auth-input" placeholder="Código de 6 dígitos" maxlength="6">
+    <button id="verificarCodigoRegistroBtn" onclick="verificarCodigoRegistro()">Verificar</button>
+    <div id="registerVerifyStatus" class="status"></div>
+    <button class="btn-outline" onclick="mostrarPantalla('registerEmail')">Volver</button>
+  </div>
+
+  <!-- ===================== REGISTRO: CONTRASEÑA ===================== -->
+  <div id="registerPassword" class="buy-section">
+    <h2>🔑 Creá tu contraseña</h2>
+    <input type="password" id="registerPasswordInput" class="auth-input" placeholder="Contraseña">
+    <input type="password" id="registerPasswordConfirmInput" class="auth-input" placeholder="Repetí la contraseña">
+    <button id="crearCuentaBtn" onclick="crearCuenta()">Crear cuenta</button>
+    <div id="registerPasswordStatus" class="status"></div>
+    <button class="btn-outline" onclick="mostrarPantalla('authChoice')">Volver</button>
+  </div>
+
+  <!-- ===================== LOGIN: CORREO Y CONTRASEÑA ===================== -->
+  <div id="loginForm" class="buy-section">
+    <h2>🔓 Iniciar sesión</h2>
+    <input type="email" id="loginEmailInput" class="auth-input" placeholder="tucorreo@ejemplo.com">
+    <input type="password" id="loginPasswordInput" class="auth-input" placeholder="Contraseña">
+    <button id="enviarLoginBtn" onclick="enviarLogin()">Iniciar sesión</button>
+    <div id="loginFormStatus" class="status"></div>
+    <button class="btn-outline" onclick="mostrarPantalla('authChoice')">Volver</button>
+  </div>
+
+  <!-- ===================== LOGIN: VERIFICAR CÓDIGO ===================== -->
+  <div id="loginVerify" class="buy-section">
+    <h2>✅ Verificá tu correo</h2>
+    <p class="sub" id="loginVerifySub">Ingresá el código que enviamos a tu correo.</p>
+    <input type="text" id="loginCodeInput" class="auth-input" placeholder="Código de 6 dígitos" maxlength="6">
+    <button id="verificarLoginBtn" onclick="verificarLogin()">Verificar e ingresar</button>
+    <div id="loginVerifyStatus" class="status"></div>
+    <button class="btn-outline" onclick="mostrarPantalla('loginForm')">Volver</button>
+  </div>
+
+  <!-- ===================== COMPRAR: MÉTODO DE PAGO ===================== -->
+  <div id="buyMetodo" class="buy-section">
+    <h2>💳 Elegí tu método de pago</h2>
+    <button onclick="mostrarPantalla('buyHoras')">Nequi</button>
+    <button onclick="mostrarPantalla('buyPaypalHoras')">PayPal</button>
+    <button class="btn-outline" onclick="mostrarPantalla('mainScreen')">Volver</button>
+  </div>
+
+  <!-- ===================== COMPRAR: PAYPAL - SELECCIÓN DE HORAS ===================== -->
+  <div id="buyPaypalHoras" class="buy-section">
+    <h2>⏱️ ¿Cuántas horas querés?</h2>
+    <div class="hours-grid">
+      <button data-horas="24" onclick="seleccionarHorasPaypal(24, this)">24h<span class="precio-mini"></span></button>
+      <button data-horas="73" onclick="seleccionarHorasPaypal(73, this)">73h<span class="precio-mini"></span></button>
+      <button data-horas="168" onclick="seleccionarHorasPaypal(168, this)">168h<span class="precio-mini"></span></button>
+      <button data-horas="720" onclick="seleccionarHorasPaypal(720, this)">720h<span class="precio-mini"></span></button>
+    </div>
+    <button id="continuarPaypalBtn" style="display:none;" onclick="irAPantallaPaypal()">Continuar</button>
+    <button class="btn-outline" onclick="mostrarPantalla('buyMetodo')">Volver</button>
+  </div>
+
+  <!-- ===================== COMPRAR: PAGO PAYPAL + COMPROBANTE ===================== -->
+  <div id="buyPaypal" class="buy-section">
+    <h2>💳 Pagar con PayPal</h2>
+    <p class="sub" id="resumenHorasPaypal">Key seleccionada: --</p>
+
+    <div class="precio-box">
+      <div class="label">Total a pagar:</div>
+      <div id="montoUsdPaypal" class="monto-usd">-- USD</div>
+    </div>
+
+    <p class="sub">Una vez que completes el pago, tomale captura y subila aquí abajo en el botón de subir comprobante.</p>
+
+    <a id="pagarPaypalBtn" class="btn2" href="#" target="_blank" rel="noopener noreferrer">💳 Pagar</a>
+
+    <form id="comprobantePaypalForm" style="display:none;">
+      <input type="hidden" name="horas" id="hiddenHorasPaypal" value="">
+      <input type="hidden" name="metodo" value="PayPal">
+      <input type="file" name="comprobante" id="fileInputPaypal" accept="image/*" style="display:none;">
+    </form>
+
+    <button id="uploadBtnPaypal" onclick="document.getElementById('fileInputPaypal').click()">📎 Subir comprobante</button>
+    <div id="fileNamePaypal" class="file-name"></div>
+    <button id="enviarComprobantePaypalBtn" style="display:none;" onclick="enviarComprobantePaypal()">✅ Enviar comprobante</button>
+
+    <div id="buyStatusPaypal" class="status"></div>
+    <div id="buyDebugPaypal" class="debug"></div>
+
+    <button class="btn-outline" onclick="mostrarPantalla('buyPaypalHoras')">Volver</button>
+  </div>
+
+  <!-- ===================== COMPRAR: SELECCIÓN DE HORAS ===================== -->
+  <div id="buyHoras" class="buy-section">
+    <h2>⏱️ ¿Cuántas horas querés?</h2>
+    <div class="hours-grid">
+      <button data-horas="24" onclick="seleccionarHoras(24, this)">24h<span class="precio-mini"></span></button>
+      <button data-horas="73" onclick="seleccionarHoras(73, this)">73h<span class="precio-mini"></span></button>
+      <button data-horas="168" onclick="seleccionarHoras(168, this)">168h<span class="precio-mini"></span></button>
+      <button data-horas="720" onclick="seleccionarHoras(720, this)">720h<span class="precio-mini"></span></button>
+    </div>
+    <button id="continuarNequiBtn" style="display:none;" onclick="irAPantallaNequi()">Continuar</button>
+    <button class="btn-outline" onclick="mostrarPantalla('buyMetodo')">Volver</button>
+  </div>
+
+  <!-- ===================== COMPRAR: PAGO NEQUI + COMPROBANTE ===================== -->
+  <div id="buyNequi" class="buy-section">
+    <h2>📲 Pagar con Nequi</h2>
+    <p class="sub" id="resumenHoras">Key seleccionada: --</p>
+
+    <div class="precio-box">
+      <div class="label">Total a pagar:</div>
+      <div id="montoUsd" class="monto-usd">-- USD</div>
+      <div id="montoCop" class="monto-cop">-- COP</div>
+    </div>
+
+    <div class="nequi-box">
+      <div class="label">Envía el pago a este número:</div>
+      <div class="numero">+573001125554</div>
+    </div>
+    <button class="btn-outline" onclick="copiarNumero()">📋 Copiar número</button>
+
+    <form id="comprobanteForm" style="display:none;">
+      <input type="hidden" name="horas" id="hiddenHoras" value="">
+      <input type="hidden" name="metodo" value="Nequi">
+      <input type="file" name="comprobante" id="fileInput" accept="image/*" style="display:none;">
+    </form>
+
+    <button id="uploadBtn" onclick="document.getElementById('fileInput').click()">📎 Subir comprobante</button>
+    <div id="fileName" class="file-name"></div>
+    <button id="enviarComprobanteBtn" style="display:none;" onclick="enviarComprobante()">✅ Enviar comprobante</button>
+
+    <div id="buyStatus" class="status"></div>
+    <div id="buyDebug" class="debug"></div>
+
+    <button class="btn-outline" onclick="mostrarPantalla('buyHoras')">Volver</button>
+  </div>
+
 </div>
 
 <script>
@@ -147,6 +392,48 @@
   const DURACION_HORAS = 8;
   const COOLDOWN_HORAS = 8;
   const REFERRER_VALIDO = "blacklink.site";
+  const NUMERO_NEQUI = "+573001125554";
+
+  const EMAILJS_PUBLIC_KEY = "2UbRoAsR9vqALDh91";
+  const EMAILJS_SERVICE_ID = "service_9hsae1f";
+  const EMAILJS_TEMPLATE_ID = "template_vgxg4bn";
+  const CORREO_DESTINO = "oficialdarkmatter@gmail.com";
+
+  const TASA_COP = 3800;
+  const PRECIOS_USD = {
+    24: 1,
+    73: 2.5,
+    168: 5,
+    720: 21
+  };
+
+  const PAYPAL_LINKS = {
+    24: "https://www.paypal.com/ncp/payment/WZ37TTLEE8BPW",
+    73: "https://www.paypal.com/ncp/payment/8E2VHAZGRJNLJ",
+    168: "https://www.paypal.com/ncp/payment/UKGCXXBNHF8BQ",
+    720: "https://www.paypal.com/ncp/payment/KHLLRKDSTARJG"
+  };
+
+  emailjs.init(EMAILJS_PUBLIC_KEY);
+
+  function formatUSD(usd) {
+    return usd.toLocaleString("en-US", { minimumFractionDigits: usd % 1 === 0 ? 0 : 2, maximumFractionDigits: 2 });
+  }
+  function formatCOP(cop) {
+    return cop.toLocaleString("es-CO");
+  }
+
+  // Pinta los precios en cada botón de la grilla de horas
+  function pintarPreciosGrid() {
+    document.querySelectorAll(".hours-grid button").forEach(btn => {
+      const horas = btn.getAttribute("data-horas");
+      const usd = PRECIOS_USD[horas];
+      const mini = btn.querySelector(".precio-mini");
+      if (usd !== undefined && mini) {
+        mini.textContent = `${formatUSD(usd)} USD`;
+      }
+    });
+  }
 
   function generarKey() {
     const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
@@ -186,12 +473,14 @@
     return data;
   }
 
-  function iniciarContador(msRestante) {
+  function iniciarContador(msRestante, etiqueta) {
     const timerBox = document.getElementById("timerBox");
     const clock = document.getElementById("clock");
+    const timerLabel = document.getElementById("timerLabel");
     const backBtn = document.getElementById("backBtn");
     timerBox.style.display = "block";
     backBtn.style.display = "block";
+    if (etiqueta) timerLabel.textContent = etiqueta;
 
     let restante = msRestante;
     function tick() {
@@ -216,31 +505,56 @@
     const loader = document.getElementById("loader");
     const backBtn = document.getElementById("backBtn");
     const goShortenerBtn = document.getElementById("goShortenerBtn");
+    const buyKeyBtn = document.getElementById("buyKeyBtn");
     const debug = document.getElementById("debug");
+
+    pintarPreciosGrid();
+
+    let ip, ahora, cooldown;
+
+    // Primero se revisa si ya existe una key gratis activa para esta IP,
+    // sin importar si se entró directo o a través del acortador.
+    try {
+      ip = await obtenerIP();
+      ahora = Date.now();
+      cooldown = await dbGet(`COOLDOWNS/${ip}`);
+    } catch (err) {
+      loader.style.display = "none";
+      sub.textContent = "Ocurrió un error.";
+      status.textContent = "Tocá para reintentar.";
+      debug.textContent = err.message;
+      backBtn.style.display = "block";
+      buyKeyBtn.style.display = "block";
+      console.error(err);
+      return;
+    }
+
+    if (cooldown && cooldown.timestamp && cooldown.key) {
+      const restante = (cooldown.timestamp + COOLDOWN_HORAS * 3600 * 1000) - ahora;
+      if (restante > 0) {
+        loader.style.display = "none";
+        sub.textContent = "Ya tenés una key activa.";
+        const box = document.getElementById("keyBox");
+        box.textContent = cooldown.key;
+        box.style.display = "block";
+        document.getElementById("copyBtn").style.display = "block";
+        buyKeyBtn.style.display = "block";
+        status.textContent = `Válida por ${DURACION_HORAS} horas.`;
+        iniciarContador(restante, "Tu key es válida por:");
+        return;
+      }
+    }
 
     if (!document.referrer.includes(REFERRER_VALIDO)) {
       loader.style.display = "none";
       sub.textContent = "Para generar tu key de 8 horas, primero debes completar el acortador.";
-      status.textContent = "Tocá el botón de abajo para continuar.";
+      status.textContent = "";
       goShortenerBtn.style.display = "block";
+      buyKeyBtn.style.display = "block";
       return;
     }
 
     try {
-      const ip = await obtenerIP();
-      const ahora = Date.now();
-
-      const cooldown = await dbGet(`COOLDOWNS/${ip}`);
-      if (cooldown && cooldown.timestamp) {
-        const restante = (cooldown.timestamp + COOLDOWN_HORAS * 3600 * 1000) - ahora;
-        if (restante > 0) {
-          loader.style.display = "none";
-          sub.textContent = "Ya generaste una key.";
-          iniciarContador(restante);
-          return;
-        }
-      }
-
       let key, existe = true, intentos = 0;
       while (existe) {
         intentos++;
@@ -252,7 +566,7 @@
 
       const expira = ahora + DURACION_HORAS * 3600 * 1000;
       await dbSet(`KEYS/${key}`, { expira: expira });
-      await dbSet(`COOLDOWNS/${ip}`, { timestamp: ahora });
+      await dbSet(`COOLDOWNS/${ip}`, { timestamp: ahora, key: key });
 
       loader.style.display = "none";
       sub.textContent = "¡Key generada con éxito!";
@@ -268,14 +582,631 @@
       status.textContent = "Tocá para reintentar.";
       debug.textContent = err.message;
       backBtn.style.display = "block";
+      buyKeyBtn.style.display = "block";
       console.error(err);
     }
   }
 
   function copiarKey() {
     const key = document.getElementById("keyBox").textContent;
-    navigator.clipboard.writeText(key);
-    document.getElementById("status").textContent = "¡Copiada!";
+    copiarTexto(key, document.getElementById("status"), "¡Copiada!");
+  }
+
+  // ===================== COPIADO ROBUSTO (con fallback) =====================
+
+  async function copiarTexto(texto, elementoStatus, mensajeExito) {
+    try {
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(texto);
+        elementoStatus.textContent = mensajeExito;
+        return;
+      }
+      throw new Error("Clipboard API no disponible");
+    } catch (err) {
+      try {
+        const textarea = document.createElement("textarea");
+        textarea.value = texto;
+        textarea.style.position = "fixed";
+        textarea.style.opacity = "0";
+        document.body.appendChild(textarea);
+        textarea.focus();
+        textarea.select();
+        const ok = document.execCommand("copy");
+        document.body.removeChild(textarea);
+        elementoStatus.textContent = ok ? mensajeExito : "No se pudo copiar, copiá manualmente.";
+      } catch (err2) {
+        elementoStatus.textContent = "No se pudo copiar, copiá manualmente.";
+        console.error(err2);
+      }
+    }
+  }
+
+  // ===================== AUTENTICACIÓN =====================
+
+  const SESSION_KEY = "dm_session";
+  const EMAILJS_TEMPLATE_ID_CODE = "template_mbwtpph";
+
+  let regState = { email: "", code: "" };
+  let loginState = { email: "", code: "" };
+
+  function emailKeyFromEmail(email) {
+    return email.toLowerCase().trim().replace(/[.#$\[\]]/g, "_");
+  }
+
+  function validarEmail(email) {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  }
+
+  function generarCodigo() {
+    return String(Math.floor(100000 + Math.random() * 900000));
+  }
+
+  async function hashPassword(password) {
+    const enc = new TextEncoder().encode(password);
+    const hashBuffer = await crypto.subtle.digest("SHA-256", enc);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    return hashArray.map(b => b.toString(16).padStart(2, "0")).join("");
+  }
+
+  function getSession() {
+    try {
+      const raw = localStorage.getItem(SESSION_KEY);
+      if (!raw) return null;
+      const data = JSON.parse(raw);
+      if (data && data.email) return data;
+      return null;
+    } catch (err) {
+      return null;
+    }
+  }
+
+  function guardarSesion(email) {
+    localStorage.setItem(SESSION_KEY, JSON.stringify({ email: email }));
+  }
+
+  function iniciarCompra() {
+    const session = getSession();
+    if (session && session.email) {
+      mostrarPantalla('buyMetodo');
+    } else {
+      mostrarPantalla('authChoice');
+    }
+  }
+
+  async function enviarCodigoPorCorreo(email, codigo) {
+    return emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID_CODE, {
+      codigo: codigo,
+      para: email,
+      fecha: new Date().toLocaleString("es-CO")
+    }, { publicKey: EMAILJS_PUBLIC_KEY });
+  }
+
+  function prepararRegistro() {
+    document.getElementById("registerEmailInput").value = "";
+    document.getElementById("registerEmailStatus").textContent = "";
+    regState = { email: "", code: "" };
+    mostrarPantalla('registerEmail');
+  }
+
+  async function enviarCodigoRegistro() {
+    const status = document.getElementById("registerEmailStatus");
+    const btn = document.getElementById("enviarCodigoRegistroBtn");
+    const email = document.getElementById("registerEmailInput").value.trim();
+
+    if (!validarEmail(email)) {
+      status.textContent = "Ingresá un correo válido.";
+      return;
+    }
+
+    btn.disabled = true;
+    status.textContent = "Verificando...";
+
+    try {
+      const emailKey = emailKeyFromEmail(email);
+      const existente = await dbGet(`USERS/${emailKey}`);
+      if (existente) {
+        status.textContent = "Ya existe una cuenta con este correo. Iniciá sesión.";
+        btn.disabled = false;
+        return;
+      }
+
+      const codigo = generarCodigo();
+      regState.email = email;
+      regState.code = codigo;
+
+      status.textContent = "Enviando código...";
+      await enviarCodigoPorCorreo(email, codigo);
+
+      document.getElementById("registerVerifySub").textContent = `Ingresá el código que enviamos a ${email}.`;
+      document.getElementById("registerCodeInput").value = "";
+      document.getElementById("registerVerifyStatus").textContent = "";
+      btn.disabled = false;
+      mostrarPantalla('registerVerify');
+    } catch (err) {
+      status.textContent = "Ocurrió un error, intentá de nuevo.";
+      btn.disabled = false;
+      console.error(err);
+    }
+  }
+
+  function verificarCodigoRegistro() {
+    const status = document.getElementById("registerVerifyStatus");
+    const codigo = document.getElementById("registerCodeInput").value.trim();
+
+    if (codigo === "") {
+      status.textContent = "Ingresá el código.";
+      return;
+    }
+
+    if (codigo !== regState.code) {
+      status.textContent = "Código incorrecto.";
+      return;
+    }
+
+    status.textContent = "";
+    document.getElementById("registerPasswordInput").value = "";
+    document.getElementById("registerPasswordConfirmInput").value = "";
+    document.getElementById("registerPasswordStatus").textContent = "";
+    mostrarPantalla('registerPassword');
+  }
+
+  async function crearCuenta() {
+    const status = document.getElementById("registerPasswordStatus");
+    const btn = document.getElementById("crearCuentaBtn");
+    const password = document.getElementById("registerPasswordInput").value;
+    const passwordConfirm = document.getElementById("registerPasswordConfirmInput").value;
+
+    if (password.length < 6) {
+      status.textContent = "La contraseña debe tener al menos 6 caracteres.";
+      return;
+    }
+
+    if (password !== passwordConfirm) {
+      status.textContent = "Las contraseñas no coinciden.";
+      return;
+    }
+
+    btn.disabled = true;
+    status.textContent = "Creando cuenta...";
+
+    try {
+      const passwordHash = await hashPassword(password);
+      const emailKey = emailKeyFromEmail(regState.email);
+      await dbSet(`USERS/${emailKey}`, { email: regState.email, passwordHash: passwordHash });
+      guardarSesion(regState.email);
+      btn.disabled = false;
+      status.textContent = "";
+      mostrarPantalla('buyMetodo');
+    } catch (err) {
+      status.textContent = "Ocurrió un error al crear la cuenta.";
+      btn.disabled = false;
+      console.error(err);
+    }
+  }
+
+  async function enviarLogin() {
+    const status = document.getElementById("loginFormStatus");
+    const btn = document.getElementById("enviarLoginBtn");
+    const email = document.getElementById("loginEmailInput").value.trim();
+    const password = document.getElementById("loginPasswordInput").value;
+
+    if (!validarEmail(email)) {
+      status.textContent = "Ingresá un correo válido.";
+      return;
+    }
+    if (password === "") {
+      status.textContent = "Ingresá tu contraseña.";
+      return;
+    }
+
+    btn.disabled = true;
+    status.textContent = "Verificando...";
+
+    try {
+      const emailKey = emailKeyFromEmail(email);
+      const usuario = await dbGet(`USERS/${emailKey}`);
+
+      if (!usuario) {
+        status.textContent = "No existe una cuenta con este correo.";
+        btn.disabled = false;
+        return;
+      }
+
+      const passwordHash = await hashPassword(password);
+      if (passwordHash !== usuario.passwordHash) {
+        status.textContent = "Contraseña incorrecta.";
+        btn.disabled = false;
+        return;
+      }
+
+      const codigo = generarCodigo();
+      loginState.email = email;
+      loginState.code = codigo;
+
+      status.textContent = "Enviando código...";
+      await enviarCodigoPorCorreo(email, codigo);
+
+      document.getElementById("loginVerifySub").textContent = `Ingresá el código que enviamos a ${email}.`;
+      document.getElementById("loginCodeInput").value = "";
+      document.getElementById("loginVerifyStatus").textContent = "";
+      btn.disabled = false;
+      mostrarPantalla('loginVerify');
+    } catch (err) {
+      status.textContent = "Ocurrió un error, intentá de nuevo.";
+      btn.disabled = false;
+      console.error(err);
+    }
+  }
+
+  function verificarLogin() {
+    const status = document.getElementById("loginVerifyStatus");
+    const codigo = document.getElementById("loginCodeInput").value.trim();
+
+    if (codigo === "") {
+      status.textContent = "Ingresá el código.";
+      return;
+    }
+
+    if (codigo !== loginState.code) {
+      status.textContent = "Código incorrecto.";
+      return;
+    }
+
+    guardarSesion(loginState.email);
+    status.textContent = "";
+    mostrarPantalla('buyMetodo');
+  }
+
+  async function enviarCorreoConfirmacionComprador(datosBase) {
+    const session = getSession();
+    if (!session || !session.email) return;
+    const datos = Object.assign({}, datosBase, { para: session.email });
+    try {
+      await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, datos, { publicKey: EMAILJS_PUBLIC_KEY });
+    } catch (err) {
+      console.error(err);
+    }
+  }
+
+  // ===================== LÓGICA DE COMPRA =====================
+
+  function mostrarPantalla(id) {
+    const pantallas = ["mainScreen", "authChoice", "registerEmail", "registerVerify", "registerPassword", "loginForm", "loginVerify", "buyMetodo", "buyPaypalHoras", "buyPaypal", "buyHoras", "buyNequi"];
+    pantallas.forEach(p => {
+      document.getElementById(p).style.display = (p === id) ? "block" : "none";
+    });
+  }
+
+  function seleccionarHoras(horas, btnEl) {
+    document.querySelectorAll(".hours-grid button").forEach(b => b.classList.remove("selected"));
+    btnEl.classList.add("selected");
+    document.getElementById("hiddenHoras").value = horas;
+    document.getElementById("resumenHoras").textContent = `Key seleccionada: ${horas}h`;
+    document.getElementById("continuarNequiBtn").style.display = "block";
+  }
+
+  function actualizarResumenNequi() {
+    const horas = document.getElementById("hiddenHoras").value;
+    const usd = PRECIOS_USD[horas];
+    const montoUsd = document.getElementById("montoUsd");
+    const montoCop = document.getElementById("montoCop");
+
+    if (usd === undefined) {
+      montoUsd.textContent = "-- USD";
+      montoCop.textContent = "-- COP";
+      return;
+    }
+
+    const cop = Math.round(usd * TASA_COP);
+    montoUsd.textContent = `${formatUSD(usd)} USD`;
+    montoCop.textContent = `≈ $${formatCOP(cop)} COP`;
+  }
+
+  // Deja la pantalla de pago Nequi como recién llegado: sin archivo cargado,
+  // sin mensajes de intentos anteriores y con los botones en su estado inicial.
+  function resetPantallaNequi() {
+    const fileInput = document.getElementById("fileInput");
+    const fileName = document.getElementById("fileName");
+    const uploadBtn = document.getElementById("uploadBtn");
+    const enviarBtn = document.getElementById("enviarComprobanteBtn");
+    const buyStatus = document.getElementById("buyStatus");
+    const buyDebug = document.getElementById("buyDebug");
+
+    fileInput.value = "";
+    fileName.textContent = "";
+    buyStatus.textContent = "";
+    buyDebug.textContent = "";
+    uploadBtn.style.display = "block";
+    uploadBtn.disabled = false;
+    enviarBtn.style.display = "none";
+    enviarBtn.disabled = false;
+  }
+
+  function irAPantallaNequi() {
+    resetPantallaNequi();
+    actualizarResumenNequi();
+    mostrarPantalla('buyNequi');
+  }
+
+  function copiarNumero() {
+    copiarTexto(NUMERO_NEQUI, document.getElementById("buyStatus"), "¡Número copiado!");
+  }
+
+  document.getElementById("fileInput").addEventListener("change", function () {
+    const archivo = this.files[0];
+    const fileName = document.getElementById("fileName");
+    const enviarBtn = document.getElementById("enviarComprobanteBtn");
+    const buyStatus = document.getElementById("buyStatus");
+
+    if (!archivo) {
+      fileName.textContent = "";
+      enviarBtn.style.display = "none";
+      return;
+    }
+
+    if (!archivo.type.startsWith("image/")) {
+      fileName.textContent = "";
+      enviarBtn.style.display = "none";
+      buyStatus.textContent = "Ese archivo no es una imagen. Elegí una foto o captura del pago.";
+      this.value = "";
+      return;
+    }
+
+    buyStatus.textContent = "";
+    fileName.textContent = "Seleccionado: " + archivo.name;
+    enviarBtn.style.display = "block";
+  });
+
+  // ===================== LÓGICA DE COMPRA (PAYPAL) =====================
+
+  function seleccionarHorasPaypal(horas, btnEl) {
+    document.querySelectorAll("#buyPaypalHoras .hours-grid button").forEach(b => b.classList.remove("selected"));
+    btnEl.classList.add("selected");
+    document.getElementById("hiddenHorasPaypal").value = horas;
+    document.getElementById("resumenHorasPaypal").textContent = `Key seleccionada: ${horas}h`;
+    document.getElementById("continuarPaypalBtn").style.display = "block";
+  }
+
+  function actualizarResumenPaypal() {
+    const horas = document.getElementById("hiddenHorasPaypal").value;
+    const usd = PRECIOS_USD[horas];
+    const montoUsd = document.getElementById("montoUsdPaypal");
+    const pagarBtn = document.getElementById("pagarPaypalBtn");
+
+    if (usd === undefined) {
+      montoUsd.textContent = "-- USD";
+    } else {
+      montoUsd.textContent = `${formatUSD(usd)} USD`;
+    }
+
+    const link = PAYPAL_LINKS[horas];
+    pagarBtn.href = link ? link : "#";
+  }
+
+  // Deja la pantalla de pago PayPal como recién llegado: sin archivo cargado,
+  // sin mensajes de intentos anteriores y con los botones en su estado inicial.
+  function resetPantallaPaypal() {
+    const fileInput = document.getElementById("fileInputPaypal");
+    const fileName = document.getElementById("fileNamePaypal");
+    const uploadBtn = document.getElementById("uploadBtnPaypal");
+    const enviarBtn = document.getElementById("enviarComprobantePaypalBtn");
+    const buyStatus = document.getElementById("buyStatusPaypal");
+    const buyDebug = document.getElementById("buyDebugPaypal");
+
+    fileInput.value = "";
+    fileName.textContent = "";
+    buyStatus.textContent = "";
+    buyDebug.textContent = "";
+    uploadBtn.style.display = "block";
+    uploadBtn.disabled = false;
+    enviarBtn.style.display = "none";
+    enviarBtn.disabled = false;
+  }
+
+  function irAPantallaPaypal() {
+    resetPantallaPaypal();
+    actualizarResumenPaypal();
+    mostrarPantalla('buyPaypal');
+  }
+
+  document.getElementById("fileInputPaypal").addEventListener("change", function () {
+    const archivo = this.files[0];
+    const fileName = document.getElementById("fileNamePaypal");
+    const enviarBtn = document.getElementById("enviarComprobantePaypalBtn");
+    const buyStatus = document.getElementById("buyStatusPaypal");
+
+    if (!archivo) {
+      fileName.textContent = "";
+      enviarBtn.style.display = "none";
+      return;
+    }
+
+    if (!archivo.type.startsWith("image/")) {
+      fileName.textContent = "";
+      enviarBtn.style.display = "none";
+      buyStatus.textContent = "Ese archivo no es una imagen. Elegí una foto o captura del pago.";
+      this.value = "";
+      return;
+    }
+
+    buyStatus.textContent = "";
+    fileName.textContent = "Seleccionado: " + archivo.name;
+    enviarBtn.style.display = "block";
+  });
+
+  // Convierte el canvas a escala de grises (mejora legibilidad de texto
+  // manteniendo el peso bajo, ideal para comprobantes de pago)
+  function aplicarGrises(ctx, ancho, alto) {
+    const imageData = ctx.getImageData(0, 0, ancho, alto);
+    const data = imageData.data;
+    for (let i = 0; i < data.length; i += 4) {
+      const gris = data[i] * 0.299 + data[i + 1] * 0.587 + data[i + 2] * 0.114;
+      data[i] = gris;
+      data[i + 1] = gris;
+      data[i + 2] = gris;
+    }
+    ctx.putImageData(imageData, 0, 0);
+  }
+
+  function comprimirImagen(archivo, maxKB) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          let ancho = img.width;
+          let alto = img.height;
+          const maxDimension = 1100;
+          if (ancho > maxDimension || alto > maxDimension) {
+            const ratio = Math.min(maxDimension / ancho, maxDimension / alto);
+            ancho = Math.round(ancho * ratio);
+            alto = Math.round(alto * ratio);
+          }
+
+          const canvas = document.createElement("canvas");
+          canvas.width = ancho;
+          canvas.height = alto;
+          const ctx = canvas.getContext("2d");
+          ctx.imageSmoothingEnabled = true;
+          ctx.imageSmoothingQuality = "high";
+          ctx.drawImage(img, 0, 0, ancho, alto);
+          aplicarGrises(ctx, ancho, alto);
+
+          let calidad = 0.9;
+          let resultado = canvas.toDataURL("image/jpeg", calidad);
+
+          let intentos = 0;
+          while (resultado.length * 0.75 > maxKB * 1024 && intentos < 20) {
+            if (calidad > 0.4) {
+              calidad -= 0.05;
+            } else {
+              ancho = Math.round(ancho * 0.9);
+              alto = Math.round(alto * 0.9);
+              canvas.width = ancho;
+              canvas.height = alto;
+              ctx.imageSmoothingEnabled = true;
+              ctx.imageSmoothingQuality = "high";
+              ctx.drawImage(img, 0, 0, ancho, alto);
+              aplicarGrises(ctx, ancho, alto);
+            }
+            resultado = canvas.toDataURL("image/jpeg", calidad);
+            intentos++;
+          }
+
+          if (resultado.length * 0.75 > maxKB * 1024) {
+            reject(new Error("No se pudo comprimir la imagen lo suficiente. Probá con otra más liviana."));
+            return;
+          }
+
+          resolve(resultado.split(",")[1]);
+        };
+        img.onerror = () => reject(new Error("No se pudo leer la imagen"));
+        img.src = e.target.result;
+      };
+      reader.onerror = () => reject(new Error("No se pudo leer el archivo"));
+      reader.readAsDataURL(archivo);
+    });
+  }
+
+  async function enviarComprobante() {
+    const enviarBtn = document.getElementById("enviarComprobanteBtn");
+    const uploadBtn = document.getElementById("uploadBtn");
+    const buyStatus = document.getElementById("buyStatus");
+    const buyDebug = document.getElementById("buyDebug");
+    const fileInput = document.getElementById("fileInput");
+    const horas = document.getElementById("hiddenHoras").value;
+    const usd = PRECIOS_USD[horas];
+    const cop = usd !== undefined ? Math.round(usd * TASA_COP) : null;
+
+    if (!fileInput.files[0]) {
+      buyStatus.textContent = "Seleccioná una imagen primero.";
+      return;
+    }
+
+    enviarBtn.disabled = true;
+    uploadBtn.disabled = true;
+    buyStatus.textContent = "Comprimiendo imagen...";
+    buyDebug.textContent = "";
+
+    try {
+      const imagenBase64 = await comprimirImagen(fileInput.files[0], 38);
+
+      buyStatus.textContent = "Enviando comprobante...";
+
+      const session = getSession();
+      const datosCorreo = {
+        horas: horas,
+        precio_usd: usd !== undefined ? formatUSD(usd) : "",
+        precio_cop: cop !== null ? formatCOP(cop) : "",
+        metodo: "Nequi",
+        imagen_base64: imagenBase64,
+        fecha: new Date().toLocaleString("es-CO"),
+        comprador: (session && session.email) ? session.email : ""
+      };
+
+      await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, Object.assign({}, datosCorreo, { para: CORREO_DESTINO }), { publicKey: EMAILJS_PUBLIC_KEY });
+      await enviarCorreoConfirmacionComprador(datosCorreo);
+
+      buyStatus.textContent = "✅ Tu pedido está siendo verificado. Este proceso puede tardar de 5 minutos a 3 horas.";
+      enviarBtn.style.display = "none";
+      uploadBtn.style.display = "none";
+    } catch (err) {
+      buyStatus.textContent = "❌ Error al enviar el comprobante. Intentá de nuevo.";
+      buyDebug.textContent = err.text || err.message || JSON.stringify(err);
+      enviarBtn.disabled = false;
+      uploadBtn.disabled = false;
+      console.error(err);
+    }
+  }
+
+  async function enviarComprobantePaypal() {
+    const enviarBtn = document.getElementById("enviarComprobantePaypalBtn");
+    const uploadBtn = document.getElementById("uploadBtnPaypal");
+    const buyStatus = document.getElementById("buyStatusPaypal");
+    const buyDebug = document.getElementById("buyDebugPaypal");
+    const fileInput = document.getElementById("fileInputPaypal");
+    const horas = document.getElementById("hiddenHorasPaypal").value;
+    const usd = PRECIOS_USD[horas];
+
+    if (!fileInput.files[0]) {
+      buyStatus.textContent = "Seleccioná una imagen primero.";
+      return;
+    }
+
+    enviarBtn.disabled = true;
+    uploadBtn.disabled = true;
+    buyStatus.textContent = "Comprimiendo imagen...";
+    buyDebug.textContent = "";
+
+    try {
+      const imagenBase64 = await comprimirImagen(fileInput.files[0], 38);
+
+      buyStatus.textContent = "Enviando comprobante...";
+
+      const session = getSession();
+      const datosCorreo = {
+        horas: horas,
+        precio_usd: usd !== undefined ? formatUSD(usd) : "",
+        precio_cop: "",
+        metodo: "PayPal",
+        imagen_base64: imagenBase64,
+        fecha: new Date().toLocaleString("es-CO"),
+        comprador: (session && session.email) ? session.email : ""
+      };
+
+      await emailjs.send(EMAILJS_SERVICE_ID, EMAILJS_TEMPLATE_ID, Object.assign({}, datosCorreo, { para: CORREO_DESTINO }), { publicKey: EMAILJS_PUBLIC_KEY });
+      await enviarCorreoConfirmacionComprador(datosCorreo);
+
+      buyStatus.textContent = "✅ Tu pedido está siendo verificado. Este proceso puede tardar de 5 minutos a 3 horas.";
+      enviarBtn.style.display = "none";
+      uploadBtn.style.display = "none";
+    } catch (err) {
+      buyStatus.textContent = "❌ Error al enviar el comprobante. Intentá de nuevo.";
+      buyDebug.textContent = err.text || err.message || JSON.stringify(err);
+      enviarBtn.disabled = false;
+      uploadBtn.disabled = false;
+      console.error(err);
+    }
   }
 
   iniciar();
