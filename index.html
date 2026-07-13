@@ -133,6 +133,7 @@
 
   <div id="keyBox" class="key-box"></div>
   <button id="copyBtn" style="display:none;" onclick="copiarKey()">Copiar key</button>
+  <a id="goShortenerBtn" class="btn2" style="display:none;" href="https://blacklink.site/l.php?u=u94d980f76e">⚡ Generar Key de 8h</a>
   <a id="backBtn" class="btn2" style="display:none;" href="https://darkmatter-oficial.github.io/DarkMatter-Shop/">Volver</a>
 
   <div id="status" class="status"></div>
@@ -214,13 +215,14 @@
     const sub = document.getElementById("subText");
     const loader = document.getElementById("loader");
     const backBtn = document.getElementById("backBtn");
+    const goShortenerBtn = document.getElementById("goShortenerBtn");
     const debug = document.getElementById("debug");
 
     if (!document.referrer.includes(REFERRER_VALIDO)) {
       loader.style.display = "none";
-      sub.textContent = "Acceso no válido.";
-      status.textContent = "Tenés que completar el acortador primero.";
-      backBtn.style.display = "block";
+      sub.textContent = "Para generar tu key de 8 horas, primero debes completar el acortador.";
+      status.textContent = "Tocá el botón de abajo para continuar.";
+      goShortenerBtn.style.display = "block";
       return;
     }
 
