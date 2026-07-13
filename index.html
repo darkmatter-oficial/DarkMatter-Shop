@@ -6,16 +6,20 @@
 <title>DM Key Sistem</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body {
+    height: 100%;
+    overflow: hidden;
+    overscroll-behavior: none;
+  }
   body {
     font-family: 'Segoe UI', sans-serif;
-    min-height: 100vh;
+    height: 100dvh;
     display: flex;
     align-items: center;
     justify-content: center;
     padding: 20px;
     background: radial-gradient(circle at 20% 20%, #2d0a4e, #0a0512 70%);
     color: #fff;
-    overflow: hidden;
     position: relative;
   }
   body::before, body::after {
@@ -36,34 +40,52 @@
     background: rgba(30, 10, 50, 0.55);
     border: 1px solid rgba(183, 33, 255, 0.35);
     border-radius: 20px;
-    padding: 36px 30px;
-    max-width: 420px;
+    padding: 32px 28px;
+    max-width: 400px;
     width: 100%;
     text-align: center;
     backdrop-filter: blur(14px);
     box-shadow: 0 0 60px rgba(183, 33, 255, 0.25);
   }
   h1 {
-    font-size: 22px;
+    font-size: 21px;
     background: linear-gradient(90deg, #b721ff, #7b2ff7);
     -webkit-background-clip: text;
     background-clip: text;
     color: transparent;
     margin-bottom: 6px;
   }
-  p.sub { color: #c8b8e0; font-size: 14px; margin-bottom: 22px; }
+  p.sub { color: #c8b8e0; font-size: 14px; margin-bottom: 20px; }
   .key-box {
     background: rgba(0,0,0,0.35);
     border: 1px dashed #b721ff;
     border-radius: 12px;
-    padding: 16px;
-    font-size: 18px;
+    padding: 14px;
+    font-size: 16px;
     font-weight: bold;
     letter-spacing: 1px;
     word-break: break-all;
-    margin-bottom: 16px;
+    margin-bottom: 14px;
     display: none;
     box-shadow: 0 0 20px rgba(183,33,255,0.2) inset;
+  }
+  .timer-box {
+    background: rgba(0,0,0,0.35);
+    border: 1px solid rgba(183, 33, 255, 0.3);
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 14px;
+    display: none;
+  }
+  .timer-box .label { font-size: 12px; color: #a894c4; margin-bottom: 6px; }
+  .timer-box .clock {
+    font-size: 26px;
+    font-weight: bold;
+    letter-spacing: 2px;
+    background: linear-gradient(90deg, #b721ff, #7b2ff7);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
   }
   button, a.btn2 {
     display: block;
@@ -71,9 +93,9 @@
     color: #fff;
     border: none;
     text-decoration: none;
-    padding: 14px;
+    padding: 13px;
     border-radius: 12px;
-    font-size: 15px;
+    font-size: 14px;
     font-weight: bold;
     cursor: pointer;
     width: 100%;
@@ -81,19 +103,19 @@
     margin-top: 8px;
   }
   button:disabled { background: #3a2d4a; box-shadow: none; cursor: not-allowed; }
-  .status { font-size: 13px; color: #c8b8e0; margin-top: 14px; min-height: 18px; }
-  .debug { font-size: 10px; color: #6a5a85; margin-top: 10px; word-break: break-all; }
+  .status { font-size: 13px; color: #c8b8e0; margin-top: 12px; min-height: 18px; }
+  .debug { font-size: 10px; color: #6a5a85; margin-top: 8px; word-break: break-all; }
   .loader {
     border: 3px solid rgba(183,33,255,0.2);
     border-top: 3px solid #b721ff;
     border-radius: 50%;
-    width: 30px;
-    height: 30px;
+    width: 28px;
+    height: 28px;
     animation: spin 0.8s linear infinite;
-    margin: 20px auto;
+    margin: 18px auto;
   }
   @keyframes spin { to { transform: rotate(360deg); } }
-  .footer { margin-top: 20px; font-size: 11px; color: #6a5a85; }
+  .footer { margin-top: 16px; font-size: 11px; color: #6a5a85; }
 </style>
 </head>
 <body>
@@ -103,9 +125,15 @@
   <p class="sub" id="subText">Verificando acceso...</p>
 
   <div id="loader" class="loader"></div>
+
+  <div id="timerBox" class="timer-box">
+    <div class="label">Podrás generar otra key en:</div>
+    <div id="clock" class="clock">00:00:00</div>
+  </div>
+
   <div id="keyBox" class="key-box"></div>
   <button id="copyBtn" style="display:none;" onclick="copiarKey()">Copiar key</button>
-  <a id="backBtn" class="btn2" style="display:none;" href="https://darkmatter-oficial.github.io/DarkMatter-Shop/">Volver a generar</a>
+  <a id="backBtn" class="btn2" style="display:none;" href="https://darkmatter-oficial.github.io/DarkMatter-Shop/">Volver</a>
 
   <div id="status" class="status"></div>
   <div id="debug" class="debug"></div>
@@ -115,15 +143,18 @@
 <script>
   const DB_URL = "https://darkmatter-68e65-default-rtdb.firebaseio.com";
 
-  const DURACION_HORAS = 24;
-  const COOLDOWN_HORAS = 24;
+  const DURACION_HORAS = 8;
+  const COOLDOWN_HORAS = 8;
   const REFERRER_VALIDO = "blacklink.site";
 
   function generarKey() {
     const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
-    let random = "";
-    for (let i = 0; i < 8; i++) random += chars.charAt(Math.floor(Math.random() * chars.length));
-    return "FREE-" + random;
+    function rand(n) {
+      let s = "";
+      for (let i = 0; i < n; i++) s += chars.charAt(Math.floor(Math.random() * chars.length));
+      return s;
+    }
+    return `ADS-${rand(4)}DM${rand(4)}`;
   }
 
   async function obtenerIP() {
@@ -133,7 +164,6 @@
     return data.ip.replace(/\./g, "_");
   }
 
-  // Helpers REST API de Firebase, ahora con chequeo de errores real
   async function dbGet(path) {
     const res = await fetch(`${DB_URL}/${path}.json`);
     const data = await res.json();
@@ -153,6 +183,30 @@
       throw new Error("Firebase: " + (data && data.error ? data.error : res.status));
     }
     return data;
+  }
+
+  function iniciarContador(msRestante) {
+    const timerBox = document.getElementById("timerBox");
+    const clock = document.getElementById("clock");
+    const backBtn = document.getElementById("backBtn");
+    timerBox.style.display = "block";
+    backBtn.style.display = "block";
+
+    let restante = msRestante;
+    function tick() {
+      if (restante <= 0) {
+        clock.textContent = "00:00:00";
+        document.getElementById("status").textContent = "¡Ya podés generar otra key!";
+        return;
+      }
+      const h = Math.floor(restante / 3600000);
+      const m = Math.floor((restante % 3600000) / 60000);
+      const s = Math.floor((restante % 60000) / 1000);
+      clock.textContent = `${String(h).padStart(2,"0")}:${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}`;
+      restante -= 1000;
+      setTimeout(tick, 1000);
+    }
+    tick();
   }
 
   async function iniciar() {
@@ -179,10 +233,8 @@
         const restante = (cooldown.timestamp + COOLDOWN_HORAS * 3600 * 1000) - ahora;
         if (restante > 0) {
           loader.style.display = "none";
-          const horas = Math.ceil(restante / 3600000);
           sub.textContent = "Ya generaste una key.";
-          status.textContent = `Volvé a intentar en ~${horas}h.`;
-          backBtn.style.display = "block";
+          iniciarContador(restante);
           return;
         }
       }
