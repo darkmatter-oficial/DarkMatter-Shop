@@ -208,11 +208,65 @@
     color: #a894c4;
     word-break: break-all;
   }
+
+  /* ===================== ESTILOS MENU DESPLEGABLE (ESQUINA SUPERIOR DERECHA) ===================== */
+  .menu-btn {
+    position: absolute;
+    top: 14px;
+    right: 14px;
+    z-index: 5;
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
+    background: rgba(0,0,0,0.35);
+    border: 1px solid rgba(183, 33, 255, 0.35);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 18px;
+    color: #fff;
+    user-select: none;
+  }
+  .menu-btn:hover {
+    box-shadow: 0 0 14px rgba(183, 33, 255, 0.4);
+  }
+  .menu-dropdown {
+    position: absolute;
+    top: 54px;
+    right: 14px;
+    z-index: 6;
+    background: rgba(20, 8, 35, 0.97);
+    border: 1px solid rgba(183, 33, 255, 0.35);
+    border-radius: 12px;
+    padding: 6px;
+    min-width: 175px;
+    display: none;
+    box-shadow: 0 0 30px rgba(183, 33, 255, 0.25);
+  }
+  .menu-dropdown.show { display: block; }
+  .menu-item {
+    padding: 10px 12px;
+    border-radius: 8px;
+    font-size: 13px;
+    color: #e8dcf5;
+    cursor: pointer;
+    text-align: left;
+  }
+  .menu-item:hover { background: rgba(183, 33, 255, 0.18); }
+  .menu-item.active { color: #fff; background: rgba(183, 33, 255, 0.28); font-weight: bold; }
 </style>
 </head>
 <body>
 
 <div class="card">
+
+  <!-- ===================== MENU DESPLEGABLE (ESQUINA SUPERIOR DERECHA) ===================== -->
+  <div id="menuBtn" class="menu-btn" onclick="toggleMenu()">☰</div>
+  <div id="menuDropdown" class="menu-dropdown">
+    <div class="menu-item active" id="menuItemKeys" onclick="mostrarPantalla('keys')">🔑 Generar Keys</div>
+    <div class="menu-item" id="menuItemRef" onclick="mostrarPantalla('referidos')">🤝 Referidos</div>
+  </div>
 
   <!-- ===================== PANTALLA PRINCIPAL ===================== -->
   <div id="mainScreen">
@@ -235,9 +289,17 @@
     <div id="status" class="status"></div>
     <div id="debug" class="debug"></div>
 
-    <!-- ===================== SECCIÓN SISTEMA DE REFERIDOS ===================== -->
-    <div id="refSection" class="ref-section">
-      <hr class="ref-hr">
+    <div class="footer">DarkMatter © 2026</div>
+  </div>
+
+  <!-- ===================== PANTALLA SISTEMA DE REFERIDOS (SEPARADA, ACCESIBLE DESDE EL MENÚ) ===================== -->
+  <div id="refScreen" style="display:none;">
+    <h1>🔮 DM Key Sistem</h1>
+    <h2>Sistema de Referidos</h2>
+
+    <hr class="ref-hr">
+
+    <div id="refSection" class="ref-section" style="display:block;">
       <div class="ref-title">🤝 Sistema de Referidos</div>
       <div class="ref-desc">Compartí tu código. Cuando tus amigos generen keys, vos ganás minutos extra.</div>
       <div class="ref-desc-lock">🔒 Usamos tu IP + una huella de este dispositivo para evitar duplicados y abusos.</div>
@@ -309,7 +371,7 @@
   // Cada dispositivo tiene un código propio único con formato
   // REF-DM-XXXXXXXXXXXXXXX (15 caracteres entre mayúsculas, minúsculas y
   // números). Una persona puede conectar hasta 3 códigos de amigos distintos
-  // como "amistades conectadas". El bono de +10 minutos por amigo SOLO se
+  // como "amistades conectadas". El bono de +20 minutos por amigo SOLO se
   // activa para los amigos que ya generaron más de 3 keys de 8h o más de 1
   // key de 12h. Ese bono se suma a la duración de la PRÓXIMA key que genere
   // el dueño del código (nunca a la del amigo), y se recalcula cada vez que
@@ -371,12 +433,47 @@
   const REF_LARGO = 15;
   const REF_PREFIJO = "REF-DM-";
   const MAX_AMISTADES = 3;
-  const BONUS_MIN_POR_AMIGO = 10;
+  const BONUS_MIN_POR_AMIGO = 20;
   const MIN_KEYS_8H_PARA_CALIFICAR = 3; // más de 3
   const MIN_KEYS_12H_PARA_CALIFICAR = 1; // más de 1
 
   let MI_IP_GLOBAL = null;
   let MI_FP_GLOBAL = null;
+
+  // ===================== MENU DESPLEGABLE (ESQUINA SUPERIOR DERECHA) =====================
+
+  function toggleMenu() {
+    document.getElementById("menuDropdown").classList.toggle("show");
+  }
+
+  function mostrarPantalla(pantalla) {
+    const mainScreen = document.getElementById("mainScreen");
+    const refScreen = document.getElementById("refScreen");
+    const menuItemKeys = document.getElementById("menuItemKeys");
+    const menuItemRef = document.getElementById("menuItemRef");
+
+    if (pantalla === "referidos") {
+      mainScreen.style.display = "none";
+      refScreen.style.display = "block";
+      menuItemKeys.classList.remove("active");
+      menuItemRef.classList.add("active");
+    } else {
+      mainScreen.style.display = "block";
+      refScreen.style.display = "none";
+      menuItemRef.classList.remove("active");
+      menuItemKeys.classList.add("active");
+    }
+
+    document.getElementById("menuDropdown").classList.remove("show");
+  }
+
+  document.addEventListener("click", function (e) {
+    const menuBtn = document.getElementById("menuBtn");
+    const menuDropdown = document.getElementById("menuDropdown");
+    if (menuBtn && menuDropdown && !menuBtn.contains(e.target) && !menuDropdown.contains(e.target)) {
+      menuDropdown.classList.remove("show");
+    }
+  });
 
   function marcarPendiente(tipo) {
     try {
