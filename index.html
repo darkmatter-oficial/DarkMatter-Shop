@@ -123,6 +123,91 @@
   }
   @keyframes spin { to { transform: rotate(360deg); } }
   .footer { margin-top: 16px; font-size: 11px; color: #6a5a85; }
+
+  /* ===================== ESTILOS SISTEMA DE REFERIDOS ===================== */
+  .ref-section {
+    margin-top: 20px;
+    text-align: left;
+    display: none;
+  }
+  .ref-hr {
+    border: none;
+    border-top: 1px solid rgba(183, 33, 255, 0.25);
+    margin: 18px 0 14px 0;
+  }
+  .ref-title {
+    font-size: 14px;
+    color: #fff;
+    margin-bottom: 4px;
+    text-align: center;
+  }
+  .ref-desc {
+    font-size: 11px;
+    color: #a894c4;
+    margin-bottom: 12px;
+    text-align: center;
+  }
+  .ref-desc-lock {
+    font-size: 10px;
+    color: #6a5a85;
+    margin-bottom: 12px;
+    text-align: center;
+  }
+  .ref-label {
+    font-size: 12px;
+    color: #a894c4;
+    margin-bottom: 4px;
+  }
+  .ref-code-box {
+    background: rgba(0,0,0,0.35);
+    border: 1px dashed #b721ff;
+    border-radius: 10px;
+    padding: 10px;
+    font-size: 13px;
+    font-weight: bold;
+    letter-spacing: 0.5px;
+    word-break: break-all;
+    margin-bottom: 8px;
+    color: #fff;
+  }
+  .ref-input {
+    width: 100%;
+    padding: 10px;
+    border-radius: 10px;
+    border: 1px solid rgba(183, 33, 255, 0.3);
+    background: rgba(0,0,0,0.3);
+    color: #fff;
+    font-size: 13px;
+    margin-bottom: 8px;
+    font-family: inherit;
+  }
+  .ref-input::placeholder { color: #6a5a85; }
+  .ref-status {
+    font-size: 12px;
+    color: #c8b8e0;
+    margin-top: 8px;
+    min-height: 16px;
+  }
+  .ref-stats {
+    margin-top: 14px;
+    font-size: 12px;
+    color: #c8b8e0;
+    background: rgba(0,0,0,0.25);
+    border-radius: 10px;
+    padding: 10px;
+  }
+  .ref-stats div { margin-bottom: 4px; }
+  .ref-stats div:last-child { margin-bottom: 0; }
+  .ref-stats span {
+    font-weight: bold;
+    color: #fff;
+  }
+  .ref-friend-list {
+    margin-top: 10px;
+    font-size: 11px;
+    color: #a894c4;
+    word-break: break-all;
+  }
 </style>
 </head>
 <body>
@@ -149,6 +234,36 @@
 
     <div id="status" class="status"></div>
     <div id="debug" class="debug"></div>
+
+    <!-- ===================== SECCIÓN SISTEMA DE REFERIDOS ===================== -->
+    <div id="refSection" class="ref-section">
+      <hr class="ref-hr">
+      <div class="ref-title">🤝 Sistema de Referidos</div>
+      <div class="ref-desc">Compartí tu código. Cuando tus amigos generen keys, vos ganás minutos extra.</div>
+      <div class="ref-desc-lock">🔒 Usamos tu IP + una huella de este dispositivo para evitar duplicados y abusos.</div>
+
+      <div class="ref-label">Tu código de referido:</div>
+      <div id="miCodigoBox" class="ref-code-box">Generando...</div>
+      <button id="copiarCodigoBtn" onclick="copiarCodigoReferido()">Copiar mi código</button>
+
+      <div style="margin-top:14px;">
+        <div class="ref-label">¿Tenés el código de un amigo?</div>
+        <input id="refInput" class="ref-input" type="text" placeholder="REF-DM-XXXXXXXXXXXXXXX" maxlength="22">
+        <button id="conectarAmistadBtn" onclick="conectarAmistad()">Conectar amistad</button>
+      </div>
+
+      <div id="refStatus" class="ref-status"></div>
+
+      <div class="ref-stats">
+        <div>Amistades conectadas: <span id="amistadesCount">0</span>/3</div>
+        <div>Personas usando tu código: <span id="usosCount">0</span></div>
+        <div>Amigos que activan bono: <span id="calificadosCount">0</span></div>
+        <div>Bonus activo en tu próxima key: <span id="bonusActivo">+0 min</span></div>
+      </div>
+
+      <div id="listaAmistades" class="ref-friend-list"></div>
+    </div>
+
     <div class="footer">DarkMatter © 2026</div>
   </div>
 
@@ -162,7 +277,11 @@
   // keys directamente contra la API de Firebase, sin pasar por esta página.
   // Configurá las Firebase Security Rules (por ejemplo, exigiendo autenticación
   // de Firebase Auth o validando la forma de los datos) desde la consola de
-  // Firebase para cerrar ese hueco.
+  // Firebase para cerrar ese hueco. Esto también aplica a los nodos nuevos
+  // REFCODES, CODEOWNERS, FRIENDSHIPS, USES, KEYSTATS, DEVICE_REFCODES,
+  // DEVICE_FRIENDSHIPS, DEVICE_KEYSTATS y DEVICE_COOLDOWNS del sistema de
+  // referidos: sin reglas, cualquiera podría escribir amistades o stats falsas
+  // directo contra la API, sin pasar por esta página en absoluto.
   //
   // ===================== NOTA SOBRE LA LÓGICA DE 2 ACORTADORES =====================
   // blacklink.site es un único dominio, así que document.referrer va a decir
@@ -181,10 +300,60 @@
   // Firebase (o sea, una key que YA fue generada con éxito antes), nunca por
   // el solo hecho de volver desde blacklink.site.
   //
-  // Mientras haya una key activa (de 8h o de 12h) para tu IP, no se puede
-  // generar la otra: el cooldown en Firebase guarda cuántas horas dura esa
-  // key concreta (cooldown.horas) y hasta que no se cumplan esas horas no se
-  // muestran de nuevo los botones de generar.
+  // Mientras haya una key activa (de 8h o de 12h) para tu IP O para tu
+  // dispositivo, no se puede generar la otra: el cooldown en Firebase guarda
+  // cuántas horas dura esa key concreta (cooldown.horas) y hasta que no se
+  // cumplan esas horas no se muestran de nuevo los botones de generar.
+  //
+  // ===================== NOTA SOBRE EL SISTEMA DE REFERIDOS =====================
+  // Cada dispositivo tiene un código propio único con formato
+  // REF-DM-XXXXXXXXXXXXXXX (15 caracteres entre mayúsculas, minúsculas y
+  // números). Una persona puede conectar hasta 3 códigos de amigos distintos
+  // como "amistades conectadas". El bono de +10 minutos por amigo SOLO se
+  // activa para los amigos que ya generaron más de 3 keys de 8h o más de 1
+  // key de 12h. Ese bono se suma a la duración de la PRÓXIMA key que genere
+  // el dueño del código (nunca a la del amigo), y se recalcula cada vez que
+  // el dueño va a generar una key nueva.
+  //
+  // ===================== NOTA SOBRE DETECCIÓN ANTI-ABUSO (HUELLA DE DISPOSITIVO) =====================
+  // Antes, todo (cooldowns, código propio, amistades, stats de keys) se
+  // guardaba SOLO por IP. Eso permitía que alguien cambiara de wifi/datos
+  // móviles (o usara una VPN) para saltarse el tiempo de espera, generar
+  // varias keys, crear un código de referido nuevo por cada IP, o "inflar"
+  // su propio código de referido conectándolo desde el mismo teléfono con
+  // otra IP simulando ser "otra persona".
+  //
+  // Para frenar eso, este archivo calcula una "huella de dispositivo" (fp)
+  // combinando: user-agent, idioma, núcleos de CPU, resolución y profundidad
+  // de color de pantalla, zona horaria, un fingerprint de <canvas> y un
+  // fingerprint de WebGL (marca/modelo de GPU). Todo esto se combina en un
+  // hash (generarHuellaDispositivo). A diferencia de un ID guardado en
+  // localStorage, este hash NO se borra si la persona borra datos del
+  // navegador ni cambia de wifi, así que sigue reconociendo "el mismo
+  // teléfono/navegador" aunque la IP cambie.
+  //
+  // A partir de ahora, cada control importante se revisa por los DOS lados
+  // (IP y huella de dispositivo) y se aplica el que sea MÁS restrictivo:
+  //   - Cooldown de keys: se compara COOLDOWNS/{ip} con DEVICE_COOLDOWNS/{fp}
+  //     y se usa el que tenga más tiempo restante.
+  //   - Código propio: el código "real" es el ligado a DEVICE_REFCODES/{fp},
+  //     no el de la IP, así que cambiar de wifi no genera un código nuevo.
+  //   - Amistades conectadas (máximo 3) y "quién usa mi código": se guardan
+  //     por huella de dispositivo (DEVICE_FRIENDSHIPS/{fp}, USES/{code} ahora
+  //     guarda huellas de dispositivo en vez de IPs), así que no se puede
+  //     "inflar" el propio código de referido usando el mismo teléfono con
+  //     otra IP: si la huella coincide con el dueño del código, se bloquea.
+  //   - Stats de keys generadas (para calificar el bono de amigos): se
+  //     guardan en DEVICE_KEYSTATS/{fp}, ligadas al dispositivo, no a la IP.
+  //
+  // LIMITACIÓN HONESTA: ningún sistema 100% cliente (sin apps nativas ni
+  // verificación de identidad real) puede garantizar de forma absoluta que
+  // "un dispositivo = una persona". Alguien con conocimientos avanzados
+  // todavía podría intentar falsificar el user-agent, usar modo incógnito
+  // con configuraciones distintas, o modificar el canvas/WebGL fingerprint
+  // para generar una huella distinta. Esta huella sube muchísimo la
+  // dificultad de abusar del sistema (ya no alcanza con cambiar de wifi o
+  // borrar el localStorage), pero no es una garantía matemática absoluta.
   const DB_URL = "https://darkmatter-68e65-default-rtdb.firebaseio.com";
 
   const REFERRER_VALIDO = "blacklink.site";
@@ -196,6 +365,18 @@
 
   const PENDING_KEY = "dm_pending_tipo";
   const PENDING_VALIDEZ_MS = 30 * 60 * 1000; // 30 minutos para completar el acortador después de tocar el botón
+
+  // ===================== CONSTANTES SISTEMA DE REFERIDOS =====================
+  const REF_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+  const REF_LARGO = 15;
+  const REF_PREFIJO = "REF-DM-";
+  const MAX_AMISTADES = 3;
+  const BONUS_MIN_POR_AMIGO = 10;
+  const MIN_KEYS_8H_PARA_CALIFICAR = 3; // más de 3
+  const MIN_KEYS_12H_PARA_CALIFICAR = 1; // más de 1
+
+  let MI_IP_GLOBAL = null;
+  let MI_FP_GLOBAL = null;
 
   function marcarPendiente(tipo) {
     try {
@@ -301,12 +482,348 @@
     document.getElementById("goShortenerBtn12").style.display = "block";
   }
 
-  function mostrarKeyGenerada(key, horas) {
+  function mostrarKeyGenerada(key, horas, bonusMin) {
     const box = document.getElementById("keyBox");
     box.textContent = key;
     box.style.display = "block";
     document.getElementById("copyBtn").style.display = "block";
-    document.getElementById("status").textContent = `Válida por ${horas} horas.`;
+    if (bonusMin && bonusMin > 0) {
+      document.getElementById("status").textContent = `Válida por ${horas} horas + ${bonusMin} min de bono.`;
+    } else {
+      document.getElementById("status").textContent = `Válida por ${horas} horas.`;
+    }
+  }
+
+  // ===================== HUELLA DE DISPOSITIVO (ANTI-ABUSO) =====================
+
+  function hashString(str) {
+    // FNV-1a de 32 bits: rápido, determinístico, suficiente para huella de
+    // identificación (no es criptográfico, no hace falta que lo sea acá).
+    let hash = 2166136261;
+    for (let i = 0; i < str.length; i++) {
+      hash ^= str.charCodeAt(i);
+      hash = (hash * 16777619) >>> 0;
+    }
+    return hash.toString(16).padStart(8, "0");
+  }
+
+  function obtenerCanvasFingerprint() {
+    try {
+      const canvas = document.createElement("canvas");
+      const ctx = canvas.getContext("2d");
+      ctx.textBaseline = "top";
+      ctx.font = "14px 'Arial'";
+      ctx.fillStyle = "#f60";
+      ctx.fillRect(0, 0, 100, 20);
+      ctx.fillStyle = "#069";
+      ctx.fillText("DarkMatter-fp", 2, 2);
+      return canvas.toDataURL();
+    } catch (err) {
+      return "no-canvas";
+    }
+  }
+
+  function obtenerWebglFingerprint() {
+    try {
+      const canvas = document.createElement("canvas");
+      const gl = canvas.getContext("webgl") || canvas.getContext("experimental-webgl");
+      if (!gl) return "no-webgl";
+      const debugInfo = gl.getExtension("WEBGL_debug_renderer_info");
+      if (!debugInfo) return "no-debug-info";
+      const vendor = gl.getParameter(debugInfo.UNMASKED_VENDOR_WEBGL);
+      const renderer = gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL);
+      return `${vendor}~${renderer}`;
+    } catch (err) {
+      return "no-webgl-err";
+    }
+  }
+
+  function generarHuellaDispositivo() {
+    const partes = [
+      navigator.userAgent || "",
+      navigator.language || "",
+      String(navigator.hardwareConcurrency || ""),
+      String(screen.width) + "x" + String(screen.height) + "x" + String(screen.colorDepth),
+      (Intl.DateTimeFormat().resolvedOptions().timeZone) || "",
+      obtenerCanvasFingerprint(),
+      obtenerWebglFingerprint()
+    ];
+    return "FP-" + hashString(partes.join("||"));
+  }
+
+  // ===================== FUNCIONES SISTEMA DE REFERIDOS =====================
+
+  function generarCodigoReferido() {
+    let s = "";
+    for (let i = 0; i < REF_LARGO; i++) {
+      s += REF_CHARS.charAt(Math.floor(Math.random() * REF_CHARS.length));
+    }
+    return `${REF_PREFIJO}${s}`;
+  }
+
+  function esFormatoCodigoValido(codigo) {
+    if (typeof codigo !== "string") return false;
+    if (!codigo.startsWith(REF_PREFIJO)) return false;
+    const resto = codigo.slice(REF_PREFIJO.length);
+    if (resto.length !== REF_LARGO) return false;
+    return /^[A-Za-z0-9]+$/.test(resto);
+  }
+
+  function normalizarDueño(dueñoRaw) {
+    // CODEOWNERS antes guardaba solo la IP como string. Ahora guarda un
+    // objeto { ip, fp }. Esta función soporta ambos formatos para no romper
+    // códigos generados antes de este cambio.
+    if (!dueñoRaw) return null;
+    if (typeof dueñoRaw === "string") return { ip: dueñoRaw, fp: null };
+    return { ip: dueñoRaw.ip || null, fp: dueñoRaw.fp || null };
+  }
+
+  async function asegurarCodigoPropio(ip, fp) {
+    // 1) El código "real" de este usuario es el ligado a su huella de
+    // dispositivo. Esto es lo que impide que cambiar de wifi genere un
+    // código nuevo cada vez.
+    let codigoDispositivo = await dbGet(`DEVICE_REFCODES/${fp}`);
+    if (codigoDispositivo && esFormatoCodigoValido(codigoDispositivo)) {
+      await dbSet(`REFCODES/${ip}`, codigoDispositivo);
+      return codigoDispositivo;
+    }
+
+    // 2) Si no hay código ligado al dispositivo, revisamos si existe un
+    // código legado guardado solo por IP (de antes de este cambio) y lo
+    // migramos para que quede ligado también al dispositivo.
+    let codigoPorIp = await dbGet(`REFCODES/${ip}`);
+    if (codigoPorIp && esFormatoCodigoValido(codigoPorIp)) {
+      await dbSet(`DEVICE_REFCODES/${fp}`, codigoPorIp);
+      const dueñoActual = normalizarDueño(await dbGet(`CODEOWNERS/${codigoPorIp}`));
+      if (!dueñoActual || !dueñoActual.fp) {
+        await dbSet(`CODEOWNERS/${codigoPorIp}`, { ip: ip, fp: fp });
+      }
+      return codigoPorIp;
+    }
+
+    // 3) No tiene código en ningún lado todavía: generamos uno único nuevo.
+    let intentos = 0;
+    let nuevoCodigo;
+    let existe = true;
+    while (existe) {
+      intentos++;
+      if (intentos > 20) throw new Error("No se pudo generar un código de referido único");
+      nuevoCodigo = generarCodigoReferido();
+      const dueñoActual = await dbGet(`CODEOWNERS/${nuevoCodigo}`);
+      existe = dueñoActual !== null;
+    }
+    await dbSet(`REFCODES/${ip}`, nuevoCodigo);
+    await dbSet(`DEVICE_REFCODES/${fp}`, nuevoCodigo);
+    await dbSet(`CODEOWNERS/${nuevoCodigo}`, { ip: ip, fp: fp });
+    return nuevoCodigo;
+  }
+
+  async function obtenerStatsKeysPath(path) {
+    const stats = await dbGet(path);
+    if (!stats) return { k8: 0, k12: 0 };
+    return { k8: stats.k8 || 0, k12: stats.k12 || 0 };
+  }
+
+  async function actualizarStatsKeys(ip, fp, tipo) {
+    // Se guardan y actualizan las stats tanto por IP (legado/compatibilidad)
+    // como por huella de dispositivo (fuente de verdad real para calificar
+    // el bono de amigos, porque no se resetea al cambiar de wifi).
+    const statsIp = await obtenerStatsKeysPath(`KEYSTATS/${ip}`);
+    const statsFp = await obtenerStatsKeysPath(`DEVICE_KEYSTATS/${fp}`);
+    if (tipo === "8") {
+      statsIp.k8 = (statsIp.k8 || 0) + 1;
+      statsFp.k8 = (statsFp.k8 || 0) + 1;
+    }
+    if (tipo === "12") {
+      statsIp.k12 = (statsIp.k12 || 0) + 1;
+      statsFp.k12 = (statsFp.k12 || 0) + 1;
+    }
+    await dbSet(`KEYSTATS/${ip}`, statsIp);
+    await dbSet(`DEVICE_KEYSTATS/${fp}`, statsFp);
+  }
+
+  function amigoCalifica(stats) {
+    if (!stats) return false;
+    const k8 = stats.k8 || 0;
+    const k12 = stats.k12 || 0;
+    return k8 > MIN_KEYS_8H_PARA_CALIFICAR || k12 > MIN_KEYS_12H_PARA_CALIFICAR;
+  }
+
+  // Calcula, para el dueño de un código, cuántos dispositivos distintos lo
+  // usaron y cuántos de ellos ya califican para darle el bono de minutos.
+  // USES/{code} ahora guarda huellas de dispositivo (fp), no IPs, para que
+  // no se pueda "inflar" el propio código cambiando de wifi con el mismo
+  // teléfono.
+  async function calcularEstadoUsosPropios(codigoPropio) {
+    const usos = await dbGet(`USES/${codigoPropio}`);
+    const listaFpsAmigos = usos ? Object.keys(usos) : [];
+    let calificados = 0;
+    for (const fpAmigo of listaFpsAmigos) {
+      const stats = await obtenerStatsKeysPath(`DEVICE_KEYSTATS/${fpAmigo}`);
+      if (amigoCalifica(stats)) calificados++;
+    }
+    return { totalUsos: listaFpsAmigos.length, calificados: calificados, bonusMin: calificados * BONUS_MIN_POR_AMIGO };
+  }
+
+  async function calcularBonusMinutosParaGenerar(ip, fp) {
+    try {
+      let codigoPropio = await dbGet(`DEVICE_REFCODES/${fp}`);
+      if (!codigoPropio) codigoPropio = await dbGet(`REFCODES/${ip}`);
+      if (!codigoPropio) return 0;
+      const estado = await calcularEstadoUsosPropios(codigoPropio);
+      return estado.bonusMin;
+    } catch (err) {
+      console.error(err);
+      return 0;
+    }
+  }
+
+  async function refrescarPanelReferidos(ip, fp) {
+    try {
+      const codigoPropio = await asegurarCodigoPropio(ip, fp);
+      document.getElementById("miCodigoBox").textContent = codigoPropio;
+
+      const friendships = (await dbGet(`DEVICE_FRIENDSHIPS/${fp}`)) || {};
+      const codigosAmigos = Object.keys(friendships);
+      document.getElementById("amistadesCount").textContent = String(codigosAmigos.length);
+
+      if (codigosAmigos.length > 0) {
+        document.getElementById("listaAmistades").textContent =
+          "Amistades: " + codigosAmigos.join(", ");
+      } else {
+        document.getElementById("listaAmistades").textContent = "Todavía no conectaste ninguna amistad.";
+      }
+
+      const estado = await calcularEstadoUsosPropios(codigoPropio);
+      document.getElementById("usosCount").textContent = String(estado.totalUsos);
+      document.getElementById("calificadosCount").textContent = String(estado.calificados);
+      document.getElementById("bonusActivo").textContent = `+${estado.bonusMin} min`;
+
+      document.getElementById("refSection").style.display = "block";
+
+      if (codigosAmigos.length >= MAX_AMISTADES) {
+        document.getElementById("conectarAmistadBtn").disabled = true;
+      } else {
+        document.getElementById("conectarAmistadBtn").disabled = false;
+      }
+    } catch (err) {
+      console.error(err);
+      document.getElementById("refStatus").textContent = "No se pudo cargar tu panel de referidos.";
+    }
+  }
+
+  async function inicializarSistemaReferidos(ip, fp) {
+    MI_IP_GLOBAL = ip;
+    MI_FP_GLOBAL = fp;
+    await refrescarPanelReferidos(ip, fp);
+  }
+
+  async function conectarAmistad() {
+    const input = document.getElementById("refInput");
+    const refStatus = document.getElementById("refStatus");
+    const boton = document.getElementById("conectarAmistadBtn");
+    const codigo = input.value.trim().toUpperCase();
+
+    if (!MI_IP_GLOBAL || !MI_FP_GLOBAL) {
+      refStatus.textContent = "Todavía se está cargando tu sesión, esperá un momento.";
+      return;
+    }
+    if (!esFormatoCodigoValido(codigo)) {
+      refStatus.textContent = "Formato de código inválido. Debe ser REF-DM-XXXXXXXXXXXXXXX.";
+      return;
+    }
+
+    boton.disabled = true;
+    refStatus.textContent = "Verificando código...";
+
+    try {
+      const miCodigoDispositivo = await dbGet(`DEVICE_REFCODES/${MI_FP_GLOBAL}`);
+      if (miCodigoDispositivo && miCodigoDispositivo === codigo) {
+        refStatus.textContent = "No podés usar tu propio código de referido.";
+        boton.disabled = false;
+        return;
+      }
+
+      const dueño = normalizarDueño(await dbGet(`CODEOWNERS/${codigo}`));
+      if (!dueño) {
+        refStatus.textContent = "Ese código no existe.";
+        boton.disabled = false;
+        return;
+      }
+
+      // Bloqueo principal anti-abuso: si la huella de dispositivo del dueño
+      // del código coincide con la mía, es el mismo teléfono/navegador
+      // aunque la IP sea distinta (por ejemplo, cambió de wifi a datos).
+      if (dueño.fp && dueño.fp === MI_FP_GLOBAL) {
+        refStatus.textContent = "No podés usar un código generado desde este mismo dispositivo.";
+        boton.disabled = false;
+        return;
+      }
+      // Respaldo legado: si el código es viejo y no tiene fp guardado,
+      // igual bloqueamos por IP como antes.
+      if (!dueño.fp && dueño.ip && dueño.ip === MI_IP_GLOBAL) {
+        refStatus.textContent = "No podés usar tu propio código de referido.";
+        boton.disabled = false;
+        return;
+      }
+
+      const friendships = (await dbGet(`DEVICE_FRIENDSHIPS/${MI_FP_GLOBAL}`)) || {};
+      const codigosAmigos = Object.keys(friendships);
+
+      if (friendships[codigo]) {
+        refStatus.textContent = "Ya conectaste ese código anteriormente.";
+        boton.disabled = false;
+        return;
+      }
+      if (codigosAmigos.length >= MAX_AMISTADES) {
+        refStatus.textContent = `Ya tenés el máximo de ${MAX_AMISTADES} amistades conectadas.`;
+        boton.disabled = false;
+        return;
+      }
+
+      friendships[codigo] = true;
+      await dbSet(`DEVICE_FRIENDSHIPS/${MI_FP_GLOBAL}`, friendships);
+
+      // Mirror legado por IP, solo para compatibilidad/lectura manual en Firebase.
+      const friendshipsIp = (await dbGet(`FRIENDSHIPS/${MI_IP_GLOBAL}`)) || {};
+      friendshipsIp[codigo] = true;
+      await dbSet(`FRIENDSHIPS/${MI_IP_GLOBAL}`, friendshipsIp);
+
+      const usos = (await dbGet(`USES/${codigo}`)) || {};
+      usos[MI_FP_GLOBAL] = true;
+      await dbSet(`USES/${codigo}`, usos);
+
+      input.value = "";
+      refStatus.textContent = "¡Amistad conectada con éxito!";
+      await refrescarPanelReferidos(MI_IP_GLOBAL, MI_FP_GLOBAL);
+    } catch (err) {
+      console.error(err);
+      refStatus.textContent = "Ocurrió un error al conectar la amistad.";
+      boton.disabled = false;
+    }
+  }
+
+  function copiarCodigoReferido() {
+    const codigo = document.getElementById("miCodigoBox").textContent;
+    copiarTexto(codigo, document.getElementById("refStatus"), "¡Código copiado!");
+  }
+
+  // ===================== HELPERS DE COOLDOWN (IP + DISPOSITIVO) =====================
+
+  function calcularRestante(cooldown, ahora) {
+    if (!cooldown || !cooldown.timestamp || !cooldown.key || !cooldown.horas) return -1;
+    return (cooldown.timestamp + cooldown.horas * 3600000 + (cooldown.bonusMin || 0) * 60000) - ahora;
+  }
+
+  function elegirCooldownMasRestrictivo(cooldownIp, cooldownFp, ahora) {
+    const restanteIp = calcularRestante(cooldownIp, ahora);
+    const restanteFp = calcularRestante(cooldownFp, ahora);
+    if (restanteIp <= 0 && restanteFp <= 0) return null;
+    // Se queda con el que tenga más tiempo restante: así, si alguien
+    // cambia de IP para "resetear" el cooldown, el de su dispositivo
+    // sigue vigente y lo sigue bloqueando.
+    if (restanteFp >= restanteIp) return cooldownFp;
+    return cooldownIp;
   }
 
   async function iniciar() {
@@ -316,16 +833,19 @@
     const backBtn = document.getElementById("backBtn");
     const debug = document.getElementById("debug");
 
-    let ip, ahora, cooldown;
+    let ip, fp, ahora, cooldown;
 
     // Primero se revisa si ya existe una key activa (de 8h o de 12h) para
-    // esta IP. Esto es lo único que puede mostrar la pantalla de "ya tenés
-    // una key": nunca se muestra ese mensaje solo por volver desde
-    // blacklink.site sin haber generado una key antes.
+    // esta IP o para esta huella de dispositivo. Esto es lo único que puede
+    // mostrar la pantalla de "ya tenés una key": nunca se muestra ese mensaje
+    // solo por volver desde blacklink.site sin haber completado nada.
     try {
       ip = await obtenerIP();
+      fp = generarHuellaDispositivo();
       ahora = Date.now();
-      cooldown = await dbGet(`COOLDOWNS/${ip}`);
+      const cooldownIp = await dbGet(`COOLDOWNS/${ip}`);
+      const cooldownFp = await dbGet(`DEVICE_COOLDOWNS/${fp}`);
+      cooldown = elegirCooldownMasRestrictivo(cooldownIp, cooldownFp, ahora);
     } catch (err) {
       loader.style.display = "none";
       sub.textContent = "Ocurrió un error.";
@@ -336,23 +856,34 @@
       return;
     }
 
-    if (cooldown && cooldown.timestamp && cooldown.key && cooldown.horas) {
-      const restante = (cooldown.timestamp + cooldown.horas * 3600 * 1000) - ahora;
+    // Inicializamos el panel de referidos en paralelo, sin bloquear el flujo
+    // principal de generación de keys.
+    inicializarSistemaReferidos(ip, fp).catch(function (err) {
+      console.error(err);
+    });
+
+    if (cooldown) {
+      const restante = calcularRestante(cooldown, ahora);
       if (restante > 0) {
         loader.style.display = "none";
-        sub.textContent = `Ya tenés una key de ${cooldown.horas}h activa.`;
+        if (cooldown.bonusMin && cooldown.bonusMin > 0) {
+          sub.textContent = `Ya tenés una key de ${cooldown.horas}h (+${cooldown.bonusMin} min de bono) activa.`;
+        } else {
+          sub.textContent = `Ya tenés una key de ${cooldown.horas}h activa.`;
+        }
         ocultarBotonesAcortador();
-        mostrarKeyGenerada(cooldown.key, cooldown.horas);
+        mostrarKeyGenerada(cooldown.key, cooldown.horas, cooldown.bonusMin || 0);
         iniciarContador(restante, `Tu key de ${cooldown.horas}h es válida por:`);
         return;
       }
     }
 
-    // No hay ninguna key activa todavía. Ahora, y solo ahora, se revisa si
-    // la persona viene de blacklink.site Y tiene un pendiente válido (o sea,
-    // tocó alguno de los 2 botones hace menos de 30 minutos). Si no se
-    // cumplen las dos condiciones, jamás se genera una key sola porque el
-    // referrer diga blacklink.site: se le vuelven a mostrar los 2 botones.
+    // No hay ninguna key activa todavía (ni por IP ni por dispositivo). Ahora,
+    // y solo ahora, se revisa si la persona viene de blacklink.site Y tiene un
+    // pendiente válido (o sea, tocó alguno de los 2 botones hace menos de 30
+    // minutos). Si no se cumplen las dos condiciones, jamás se genera una key
+    // sola porque el referrer diga blacklink.site: se le vuelven a mostrar los
+    // 2 botones para que elija.
     const pendiente = leerPendiente();
     const vieneDeAcortador = document.referrer.includes(REFERRER_VALIDO);
 
@@ -368,16 +899,20 @@
           existe = check !== null;
         }
 
-        const expira = ahora + tipo.horas * 3600 * 1000;
+        const bonusMin = await calcularBonusMinutosParaGenerar(ip, fp);
+        const expira = ahora + tipo.horas * 3600 * 1000 + bonusMin * 60 * 1000;
         await dbSet(`KEYS/${key}`, { expira: expira });
-        await dbSet(`COOLDOWNS/${ip}`, { timestamp: ahora, key: key, horas: tipo.horas });
+        await dbSet(`COOLDOWNS/${ip}`, { timestamp: ahora, key: key, horas: tipo.horas, bonusMin: bonusMin });
+        await dbSet(`DEVICE_COOLDOWNS/${fp}`, { timestamp: ahora, key: key, horas: tipo.horas, bonusMin: bonusMin, ip: ip });
+        await actualizarStatsKeys(ip, fp, pendiente.tipo);
 
         limpiarPendiente();
 
         loader.style.display = "none";
         sub.textContent = "¡Key generada con éxito!";
         ocultarBotonesAcortador();
-        mostrarKeyGenerada(key, tipo.horas);
+        mostrarKeyGenerada(key, tipo.horas, bonusMin);
+        refrescarPanelReferidos(ip, fp).catch(function (err) { console.error(err); });
         return;
       } catch (err) {
         loader.style.display = "none";
