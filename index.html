@@ -209,6 +209,17 @@
     word-break: break-all;
   }
 
+  /* ===================== ESTILOS CANDADO DE REFERIDOS (NUEVO) ===================== */
+  .ref-locked {
+    margin-top: 20px;
+    text-align: center;
+    display: none;
+  }
+  .ref-locked-icon {
+    font-size: 30px;
+    margin-bottom: 8px;
+  }
+
   /* ===================== ESTILOS MENU DESPLEGABLE (ESQUINA SUPERIOR DERECHA) ===================== */
   .menu-btn {
     position: absolute;
@@ -289,6 +300,12 @@
     <div id="status" class="status"></div>
     <div id="debug" class="debug"></div>
 
+    <!-- ===================== NUEVO: CONTADOR GLOBAL DE KEYS GENERADAS ===================== -->
+    <div id="totalKeysBox" class="timer-box" style="display:none;">
+      <div class="label">🔑 Total de keys generadas por todos los usuarios:</div>
+      <div id="totalKeysCount" class="clock" style="font-size:22px;">0</div>
+    </div>
+
     <div class="footer">DarkMatter © 2026</div>
   </div>
 
@@ -299,7 +316,14 @@
 
     <hr class="ref-hr">
 
-    <div id="refSection" class="ref-section" style="display:block;">
+    <!-- ===================== NUEVO: CANDADO DE REFERIDOS (se muestra si el usuario todavía no calificó) ===================== -->
+    <div id="refLocked" class="ref-locked">
+      <div class="ref-locked-icon">🔒</div>
+      <div class="ref-title">Sistema de Referidos bloqueado</div>
+      <div class="ref-desc-lock" id="refLockedMsg">Para desbloquear el sistema de referidos primero tenés que generar 3 o más keys de 8 horas o 2 o más keys de 12 horas.</div>
+    </div>
+
+    <div id="refSection" class="ref-section" style="display:none;">
       <div class="ref-title">🤝 Sistema de Referidos</div>
       <div class="ref-desc">Compartí tu código. Cuando tus amigos generen keys, vos ganás minutos extra.</div>
       <div class="ref-desc-lock">🔒 Usamos tu IP + una huella de este dispositivo para evitar duplicados y abusos.</div>
@@ -341,9 +365,10 @@
   // de Firebase Auth o validando la forma de los datos) desde la consola de
   // Firebase para cerrar ese hueco. Esto también aplica a los nodos nuevos
   // REFCODES, CODEOWNERS, FRIENDSHIPS, USES, KEYSTATS, DEVICE_REFCODES,
-  // DEVICE_FRIENDSHIPS, DEVICE_KEYSTATS y DEVICE_COOLDOWNS del sistema de
-  // referidos: sin reglas, cualquiera podría escribir amistades o stats falsas
-  // directo contra la API, sin pasar por esta página en absoluto.
+  // DEVICE_FRIENDSHIPS, DEVICE_KEYSTATS, DEVICE_COOLDOWNS y EstadoDelPanel del
+  // sistema de referidos/estadísticas: sin reglas, cualquiera podría escribir
+  // amistades, stats falsas o inflar el contador total directo contra la API,
+  // sin pasar por esta página en absoluto.
   //
   // ===================== NOTA SOBRE LA LÓGICA DE 2 ACORTADORES =====================
   // blacklink.site es un único dominio, así que document.referrer va a decir
@@ -376,6 +401,17 @@
   // key de 12h. Ese bono se suma a la duración de la PRÓXIMA key que genere
   // el dueño del código (nunca a la del amigo), y se recalcula cada vez que
   // el dueño va a generar una key nueva.
+  //
+  // ===================== NOTA SOBRE EL CANDADO DE REFERIDOS (NUEVO) =====================
+  // Para no saturar la base de datos con códigos de referido de gente que
+  // recién entra y nunca genera keys, el apartado de Referidos ahora empieza
+  // BLOQUEADO (con un candado 🔒) para todo el mundo. Recién se desbloquea, y
+  // recién ahí se crea el código de referido único del dispositivo
+  // (DEVICE_REFCODES/REFCODES/CODEOWNERS), cuando el propio usuario generó al
+  // menos 3 keys de 8 horas o al menos 2 keys de 12 horas (usando sus propias
+  // DEVICE_KEYSTATS). Antes de cumplir eso, la pantalla de Referidos solo
+  // muestra el mensaje de candado y NO se escribe absolutamente nada nuevo en
+  // Firebase relacionado al sistema de referidos para ese dispositivo.
   //
   // ===================== NOTA SOBRE DETECCIÓN ANTI-ABUSO (HUELLA DE DISPOSITIVO) =====================
   // Antes, todo (cooldowns, código propio, amistades, stats de keys) se
@@ -437,8 +473,16 @@
   const MIN_KEYS_8H_PARA_CALIFICAR = 3; // más de 3
   const MIN_KEYS_12H_PARA_CALIFICAR = 1; // más de 1
 
+  // ===================== NUEVO: CONSTANTES DEL CANDADO DE REFERIDOS =====================
+  // Umbral que el propio usuario necesita alcanzar (con sus propias
+  // DEVICE_KEYSTATS) para desbloquear el apartado de Referidos y recién ahí
+  // crear su código de referido único.
+  const MIN_KEYS_8H_PARA_DESBLOQUEAR = 3;  // 3 o más
+  const MIN_KEYS_12H_PARA_DESBLOQUEAR = 2; // 2 o más
+
   let MI_IP_GLOBAL = null;
   let MI_FP_GLOBAL = null;
+  let MI_DESBLOQUEADO_REFERIDOS = false; // NUEVO: si el usuario ya calificó para usar Referidos
 
   // ===================== MENU DESPLEGABLE (ESQUINA SUPERIOR DERECHA) =====================
 
@@ -457,6 +501,7 @@
       refScreen.style.display = "block";
       menuItemKeys.classList.remove("active");
       menuItemRef.classList.add("active");
+      actualizarVistaReferidos(); // NUEVO: decide si se muestra el candado o el panel
     } else {
       mainScreen.style.display = "block";
       refScreen.style.display = "none";
@@ -588,6 +633,37 @@
       document.getElementById("status").textContent = `Válida por ${horas} horas + ${bonusMin} min de bono.`;
     } else {
       document.getElementById("status").textContent = `Válida por ${horas} horas.`;
+    }
+  }
+
+  // ===================== NUEVO: CONTADOR GLOBAL DE KEYS GENERADAS (EstadoDelPanel) =====================
+
+  async function obtenerTotalKeysGeneradas() {
+    const total = await dbGet(`EstadoDelPanel/TotalKeysGeneradas`);
+    return total || 0;
+  }
+
+  async function mostrarTotalKeysGeneradas() {
+    try {
+      const total = await obtenerTotalKeysGeneradas();
+      document.getElementById("totalKeysCount").textContent = String(total);
+      document.getElementById("totalKeysBox").style.display = "block";
+    } catch (err) {
+      console.error(err);
+    }
+  }
+
+  async function incrementarTotalKeysGeneradas() {
+    try {
+      const total = await obtenerTotalKeysGeneradas();
+      const nuevoTotal = total + 1;
+      await dbSet(`EstadoDelPanel/TotalKeysGeneradas`, nuevoTotal);
+      document.getElementById("totalKeysCount").textContent = String(nuevoTotal);
+      document.getElementById("totalKeysBox").style.display = "block";
+      return nuevoTotal;
+    } catch (err) {
+      console.error(err);
+      return null;
     }
   }
 
@@ -737,6 +813,7 @@
     }
     await dbSet(`KEYSTATS/${ip}`, statsIp);
     await dbSet(`DEVICE_KEYSTATS/${fp}`, statsFp);
+    return statsFp; // NUEVO: se devuelven las stats actualizadas por dispositivo, para poder re-chequear el candado sin otra lectura
   }
 
   function amigoCalifica(stats) {
@@ -744,6 +821,17 @@
     const k8 = stats.k8 || 0;
     const k12 = stats.k12 || 0;
     return k8 > MIN_KEYS_8H_PARA_CALIFICAR || k12 > MIN_KEYS_12H_PARA_CALIFICAR;
+  }
+
+  // ===================== NUEVO: CHEQUEO DE DESBLOQUEO DE REFERIDOS =====================
+  // Determina si el propio usuario (según sus propias DEVICE_KEYSTATS) ya
+  // generó suficientes keys como para desbloquear el apartado de Referidos:
+  // 3 o más keys de 8h, o 2 o más keys de 12h.
+  function usuarioDesbloqueaReferidos(stats) {
+    if (!stats) return false;
+    const k8 = stats.k8 || 0;
+    const k12 = stats.k12 || 0;
+    return k8 >= MIN_KEYS_8H_PARA_DESBLOQUEAR || k12 >= MIN_KEYS_12H_PARA_DESBLOQUEAR;
   }
 
   // Calcula, para el dueño de un código, cuántos dispositivos distintos lo
@@ -797,6 +885,7 @@
       document.getElementById("bonusActivo").textContent = `+${estado.bonusMin} min`;
 
       document.getElementById("refSection").style.display = "block";
+      document.getElementById("refLocked").style.display = "none"; // NUEVO: al mostrar el panel desbloqueado, se oculta el candado
 
       if (codigosAmigos.length >= MAX_AMISTADES) {
         document.getElementById("conectarAmistadBtn").disabled = true;
@@ -809,10 +898,39 @@
     }
   }
 
-  async function inicializarSistemaReferidos(ip, fp) {
-    MI_IP_GLOBAL = ip;
-    MI_FP_GLOBAL = fp;
-    await refrescarPanelReferidos(ip, fp);
+  // ===================== NUEVO: VERIFICAR CANDADO Y PREPARAR REFERIDOS SOLO SI CALIFICA =====================
+  // A diferencia de antes, esto YA NO crea el código de referido de forma
+  // automática para todo el mundo. Primero lee (solo lectura) las stats de
+  // keys propias por dispositivo, decide si el usuario ya calificó, y solo
+  // si calificó llama a refrescarPanelReferidos (que es lo que efectivamente
+  // crea/asegura el código en Firebase). Si no calificó, no se escribe nada
+  // nuevo relacionado a referidos para ese dispositivo.
+  async function verificarYPrepararReferidos(ip, fp) {
+    try {
+      const statsFp = await obtenerStatsKeysPath(`DEVICE_KEYSTATS/${fp}`);
+      MI_DESBLOQUEADO_REFERIDOS = usuarioDesbloqueaReferidos(statsFp);
+      if (MI_DESBLOQUEADO_REFERIDOS) {
+        await refrescarPanelReferidos(ip, fp);
+      }
+      actualizarVistaReferidos();
+    } catch (err) {
+      console.error(err);
+    }
+  }
+
+  // NUEVO: muestra el candado o el panel de referidos según corresponda,
+  // sin volver a golpear Firebase (usa el estado ya calculado en memoria).
+  function actualizarVistaReferidos() {
+    const refSection = document.getElementById("refSection");
+    const refLocked = document.getElementById("refLocked");
+    if (!refSection || !refLocked) return;
+    if (MI_DESBLOQUEADO_REFERIDOS) {
+      refLocked.style.display = "none";
+      refSection.style.display = "block";
+    } else {
+      refSection.style.display = "none";
+      refLocked.style.display = "block";
+    }
   }
 
   async function conectarAmistad() {
@@ -820,6 +938,14 @@
     const refStatus = document.getElementById("refStatus");
     const boton = document.getElementById("conectarAmistadBtn");
     const codigo = input.value.trim().toUpperCase();
+
+    if (!MI_DESBLOQUEADO_REFERIDOS) {
+      // NUEVO: resguardo extra por si esta función se llegara a disparar con
+      // el panel bloqueado (no debería ser posible desde la UI, ya que el
+      // botón está oculto detrás del candado).
+      refStatus.textContent = "Todavía no desbloqueaste el sistema de referidos.";
+      return;
+    }
 
     if (!MI_IP_GLOBAL || !MI_FP_GLOBAL) {
       refStatus.textContent = "Todavía se está cargando tu sesión, esperá un momento.";
@@ -953,9 +1079,19 @@
       return;
     }
 
-    // Inicializamos el panel de referidos en paralelo, sin bloquear el flujo
-    // principal de generación de keys.
-    inicializarSistemaReferidos(ip, fp).catch(function (err) {
+    MI_IP_GLOBAL = ip;
+    MI_FP_GLOBAL = fp;
+
+    // NUEVO: se muestra el contador global de keys generadas (solo lectura),
+    // sin bloquear el flujo principal.
+    mostrarTotalKeysGeneradas().catch(function (err) {
+      console.error(err);
+    });
+
+    // NUEVO: se verifica si el usuario ya calificó para Referidos (solo
+    // lectura de sus propias stats). El código de referido único recién se
+    // crea en Firebase si efectivamente calificó, dentro de esta función.
+    verificarYPrepararReferidos(ip, fp).catch(function (err) {
       console.error(err);
     });
 
@@ -1001,7 +1137,21 @@
         await dbSet(`KEYS/${key}`, { expira: expira });
         await dbSet(`COOLDOWNS/${ip}`, { timestamp: ahora, key: key, horas: tipo.horas, bonusMin: bonusMin });
         await dbSet(`DEVICE_COOLDOWNS/${fp}`, { timestamp: ahora, key: key, horas: tipo.horas, bonusMin: bonusMin, ip: ip });
-        await actualizarStatsKeys(ip, fp, pendiente.tipo);
+        const statsFpActualizadas = await actualizarStatsKeys(ip, fp, pendiente.tipo);
+
+        // NUEVO: se suma 1 al contador global de keys generadas por todos
+        // los usuarios (EstadoDelPanel/TotalKeysGeneradas).
+        incrementarTotalKeysGeneradas().catch(function (err) { console.error(err); });
+
+        // NUEVO: como recién se sumó una key más a las stats del dispositivo,
+        // se vuelve a chequear si con eso el usuario ya desbloqueó Referidos
+        // (por ejemplo, si esta era su 3ra key de 8h). Si corresponde, recién
+        // ahí se crea su código de referido único.
+        MI_DESBLOQUEADO_REFERIDOS = usuarioDesbloqueaReferidos(statsFpActualizadas);
+        if (MI_DESBLOQUEADO_REFERIDOS) {
+          refrescarPanelReferidos(ip, fp).catch(function (err) { console.error(err); });
+        }
+        actualizarVistaReferidos();
 
         limpiarPendiente();
 
@@ -1009,7 +1159,6 @@
         sub.textContent = "¡Key generada con éxito!";
         ocultarBotonesAcortador();
         mostrarKeyGenerada(key, tipo.horas, bonusMin);
-        refrescarPanelReferidos(ip, fp).catch(function (err) { console.error(err); });
         return;
       } catch (err) {
         loader.style.display = "none";
